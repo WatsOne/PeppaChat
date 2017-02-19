@@ -1,35 +1,25 @@
 package ru.alexkulikov.peppachat.client;
 
-import ru.alexkulikov.peppachat.shared.SocketUtils;
+import ru.alexkulikov.peppachat.shared.ConnectionDataProducer;
+import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
 
-import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
-import java.nio.channels.SocketChannel;
-import java.util.Iterator;
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import static java.nio.ByteBuffer.allocate;
-import static java.nio.channels.SelectionKey.OP_CONNECT;
-import static java.nio.channels.SelectionKey.OP_READ;
-import static java.nio.channels.SelectionKey.OP_WRITE;
-
-public class Client {
+public class Client implements ConnectionEventListener, ConnectionDataProducer {
 
     static final int PORT = 10521;
-    static final String ADDRESS = "localhost";
-    private ByteBuffer buffer = allocate(256);
+    static final String HOST = "localhost";
+
+    BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
 
     private void run() throws Exception {
-        SocketChannel channel = SocketChannel.open();
-        channel.configureBlocking(false);
-        Selector selector = Selector.open();
-        channel.register(selector, OP_CONNECT);
-        channel.connect(new InetSocketAddress(ADDRESS, PORT));
-        BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
+
+        ClientConnection connection = ClientConnectionFabric.getClienConnection();
+        connection.setup(HOST, PORT);
+        connection.setListener(this);
+        connection.setDataProducer(this);
 
         new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
@@ -43,44 +33,29 @@ public class Client {
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }
-                SelectionKey key = channel.keyFor(selector);
-                key.interestOps(OP_WRITE);
-                selector.wakeup();
+
+                try {
+                    connection.notifyToSend();
+                } catch (ClientConnectionException e) {
+
+                }
             }
         }).start();
 
-        Iterator<SelectionKey> socketIterator;
-        SelectionKey socketKey;
-
-        while (channel.isOpen()) {
-
-            selector.select();
-            socketIterator = selector.selectedKeys().iterator();
-
-            while (socketIterator.hasNext()) {
-                socketKey = socketIterator.next();
-                socketIterator.remove();
-
-                if (socketKey.isConnectable()) {
-                    channel.finishConnect();
-                    socketKey.interestOps(OP_WRITE);
-                } else if (socketKey.isReadable()) {
-                    buffer.clear();
-                    channel.read(buffer);
-                    String message = SocketUtils.getBufferData(buffer);
-                    System.out.println("Recieved = " + message);
-                } else if (socketKey.isWritable()) {
-                    String line = queue.poll();
-                    if (line != null) {
-                        channel.write(ByteBuffer.wrap(line.getBytes()));
-                    }
-                    socketKey.interestOps(OP_READ);
-                }
-            }
-        }
+        connection.start();
     }
 
     public static void main(String[] args) throws Exception {
         new Client().run();
+    }
+
+    @Override
+    public String getDataToSend() {
+        return queue.poll();
+    }
+
+    @Override
+    public void onDataArrived(String message) {
+        System.out.println(message);
     }
 }

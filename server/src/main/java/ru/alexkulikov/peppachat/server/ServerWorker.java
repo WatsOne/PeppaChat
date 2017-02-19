@@ -58,6 +58,10 @@ public class ServerWorker implements Runnable {
         }
 
         System.out.println("+++ " + message);
+
+        if (message.equals("ww")) {
+            write(key);
+        }
     }
 
     @Override
