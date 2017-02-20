@@ -1,9 +1,6 @@
-package ru.alexkulikov.peppachat.client;
+package ru.alexkulikov.peppachat.client.connection;
 
-import ru.alexkulikov.peppachat.shared.ConnectionDataProducer;
-import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
-import ru.alexkulikov.peppachat.shared.SocketUtils;
-import ru.alexkulikov.peppachat.shared.StringUtils;
+import ru.alexkulikov.peppachat.shared.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,13 +20,13 @@ public class NIOClientConnection implements ClientConnection {
     private Selector selector;
     private SocketChannel socket;
 
-    private ConnectionDataProducer dataProducer;
+    private DataProducer dataProducer;
     private ConnectionEventListener listener;
 
     private ByteBuffer buffer = allocate(256);
 
     @Override
-    public void notifyToSend() throws ClientConnectionException {
+    public void notifyToSend() throws ConnectionException {
         checkSetup();
 
         SelectionKey key = socket.keyFor(selector);
@@ -38,12 +35,12 @@ public class NIOClientConnection implements ClientConnection {
     }
 
     @Override
-    public void setListener(ConnectionEventListener listener) {
+    public void setEventListener(ConnectionEventListener listener) {
         this.listener = listener;
     }
 
     @Override
-    public void setDataProducer(ConnectionDataProducer dataProducer) {
+    public void setDataProducer(DataProducer dataProducer) {
         this.dataProducer = dataProducer;
     }
 
@@ -59,7 +56,7 @@ public class NIOClientConnection implements ClientConnection {
     }
 
     @Override
-    public void start() throws ClientConnectionException, IOException {
+    public void start() throws ConnectionException, IOException {
         checkSetup();
 
         Iterator<SelectionKey> socketIterator;
@@ -96,12 +93,20 @@ public class NIOClientConnection implements ClientConnection {
 
     @Override
     public void shutDown() {
-
+        try {
+            socket.close();
+        } catch (IOException ignored) {
+        }
     }
 
-    private void checkSetup() throws ClientConnectionException {
+    @Override
+    public boolean isAlive() {
+        return socket.isOpen() && socket.isConnected();
+    }
+
+    private void checkSetup() throws ConnectionException {
         if (socket == null || selector == null) {
-            throw new ClientConnectionException("Connection doesn't setup");
+            throw new ConnectionException("Connection doesn't setup");
         }
     }
 }

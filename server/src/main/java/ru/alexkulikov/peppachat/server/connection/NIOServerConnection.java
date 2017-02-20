@@ -1,6 +1,7 @@
-package ru.alexkulikov.peppachat.server;
+package ru.alexkulikov.peppachat.server.connection;
 
-
+import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.ConnectionException;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
 
 import java.io.IOException;
@@ -12,28 +13,62 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
-public class ServerWorker implements Runnable {
-    private static final int DEFAULT_PORT = 10521;
-    private static final String DEFAULT_HOST = "localhost";
+public class NIOServerConnection implements ServerConnection {
 
-    private final ByteBuffer welcomeBuf = ByteBuffer.wrap("Welcome to KulChat!\n".getBytes());
     private ByteBuffer readBuf = ByteBuffer.allocate(256);
-
     private Selector selector;
     private ServerSocketChannel socket;
 
-    public ServerWorker() throws IOException {
-        initialize();
+
+    @Override
+    public void notifyToSend() throws ConnectionException {
+
     }
 
-    private void initialize() throws IOException {
+    @Override
+    public void setEventListener(ConnectionEventListener listener) {
+
+    }
+
+    @Override
+    public void setup(String host, int port) throws IOException {
         selector = Selector.open();
 
         socket = ServerSocketChannel.open();
-        socket.bind(new InetSocketAddress(DEFAULT_HOST, DEFAULT_PORT));
+        socket.bind(new InetSocketAddress(host, port));
         socket.configureBlocking(false);
 
         socket.register(selector, SelectionKey.OP_ACCEPT);
+    }
+
+    @Override
+    public void start() throws ConnectionException, IOException {
+        Iterator<SelectionKey> socketIterator;
+        SelectionKey socketKey;
+
+        while (socket.isOpen()) {
+
+            selector.select();
+            socketIterator = selector.selectedKeys().iterator();
+
+            while (socketIterator.hasNext()) {
+                socketKey = socketIterator.next();
+                socketIterator.remove();
+
+                if (socketKey.isAcceptable()) {
+                    processAccept(socketKey);
+                }
+
+                if (socketKey.isReadable()) {
+                    processRead(socketKey);
+                }
+            }
+        }
+    }
+
+    @Override
+    public void shutDown() {
+
     }
 
     private void processAccept(SelectionKey key) throws IOException {
@@ -52,7 +87,7 @@ public class ServerWorker implements Runnable {
 
         if (readCount >= 0) {
             message = SocketUtils.getBufferData(readBuf);
-        } else  {
+        } else {
             message = key.attachment() + " left the chat.\n";
             clientSocket.close();
         }
@@ -64,39 +99,20 @@ public class ServerWorker implements Runnable {
         }
     }
 
-    @Override
-    public void run() {
-        try {
-            Iterator<SelectionKey> socketIterator;
-            SelectionKey socketKey;
-
-            while (socket.isOpen()) {
-
-                selector.select();
-                socketIterator = selector.selectedKeys().iterator();
-
-                while (socketIterator.hasNext()) {
-                    socketKey = socketIterator.next();
-                    socketIterator.remove();
-
-                    if (socketKey.isAcceptable()) {
-                        processAccept(socketKey);
-                    }
-
-                    if (socketKey.isReadable()) {
-                        processRead(socketKey);
-                    }
-                }
-            }
-
-        } catch (IOException e) {
-            System.out.println(e.getMessage());
-        }
-    }
-
     private void write(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
         clientChannel.write(ByteBuffer.wrap("HELLO FROM SERVER!".getBytes()));
         key.interestOps(SelectionKey.OP_READ);
+    }
+
+    @Override
+    public boolean isAlive() {
+        return true;
+    }
+
+    private void checkSetup() throws ConnectionException {
+        if (socket == null || selector == null) {
+            throw new ConnectionException("Connection doesn't setup");
+        }
     }
 }
