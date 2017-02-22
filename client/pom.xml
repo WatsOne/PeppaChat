@@ -20,6 +20,10 @@
             <groupId>ru.alexakulikov</groupId>
             <artifactId>shared</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,10 +1,12 @@
 package ru.alexkulikov.peppachat.client;
 
+import com.google.gson.Gson;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
 import ru.alexkulikov.peppachat.shared.ConnectionException;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;
 import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.Message;
 
 import java.util.Scanner;
 import java.util.concurrent.ArrayBlockingQueue;
@@ -36,7 +38,7 @@ public class Client implements ConnectionEventListener, DataProducer {
                     }
 
                     try {
-                        queue.put(line);
+                        queue.put(serialize(line));
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
@@ -55,13 +57,20 @@ public class Client implements ConnectionEventListener, DataProducer {
         new Client().run();
     }
 
+    private String serialize(String text) {
+        Message message = new Message();
+        message.setText(text);
+        return new Gson().toJson(message);
+    }
+
     @Override
     public String getDataToSend() {
         return queue.poll();
     }
 
     @Override
-    public void onDataArrived(String message) {
-        System.out.println(message);
+    public void onDataArrived(String messageStr) {
+        Message message = new Gson().fromJson(messageStr, Message.class);
+        System.out.println(message.getText());
     }
 }

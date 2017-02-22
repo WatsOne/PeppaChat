@@ -1,7 +1,9 @@
 package ru.alexkulikov.peppachat.server.connection;
 
+import com.google.gson.Gson;
 import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.ConnectionException;
+import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
 
 import java.io.IOException;
@@ -19,6 +21,7 @@ public class NIOServerConnection implements ServerConnection {
     private Selector selector;
     private ServerSocketChannel socket;
 
+    private ConnectionEventListener listener;
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -27,7 +30,7 @@ public class NIOServerConnection implements ServerConnection {
 
     @Override
     public void setEventListener(ConnectionEventListener listener) {
-
+        this.listener = listener;
     }
 
     @Override
@@ -93,15 +96,18 @@ public class NIOServerConnection implements ServerConnection {
         }
 
         System.out.println("+++ " + message);
+        Message m = new Gson().fromJson(message, Message.class);
 
-        if (message.equals("ww")) {
+        if (m.getText().equals("ww")) {
             write(key);
         }
     }
 
     private void write(SelectionKey key) throws IOException {
         SocketChannel clientChannel = (SocketChannel) key.channel();
-        clientChannel.write(ByteBuffer.wrap("HELLO FROM SERVER!".getBytes()));
+        Message message = new Message();
+        message.setText("HEELO! FROM SERVER");
+        clientChannel.write(ByteBuffer.wrap(new Gson().toJson(message, Message.class).getBytes()));
         key.interestOps(SelectionKey.OP_READ);
     }
 
