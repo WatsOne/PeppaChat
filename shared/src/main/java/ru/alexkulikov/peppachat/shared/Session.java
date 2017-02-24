@@ -5,7 +5,7 @@ import java.io.Serializable;
 public class Session implements Serializable {
 
     private Long id;
-    private String name;
+    private String userName;
 
     public Session() {
     }
@@ -18,19 +18,19 @@ public class Session implements Serializable {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getUserName() {
+        return userName;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUserName(String userName) {
+        this.userName = userName;
     }
 
     @Override
     public String toString() {
         return "Session{" +
                 "id=" + id +
-                ", name='" + name + '\'' +
+                ", userName='" + userName + '\'' +
                 '}';
     }
 }

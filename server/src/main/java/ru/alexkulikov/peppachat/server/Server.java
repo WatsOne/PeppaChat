@@ -13,7 +13,6 @@ import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
 
 public class Server implements ConnectionEventListener {
@@ -65,7 +64,7 @@ public class Server implements ConnectionEventListener {
 
     private void sendMessage(Message message) {
         storage.saveMessage(message);
-        message.setText(message.getSession().getName() + ": " + message.getText());
+        message.setText(message.getSession().getUserName() + ": " + message.getText());
         worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
     }
 
@@ -75,7 +74,7 @@ public class Server implements ConnectionEventListener {
         if (serverSession != null) {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already registered")));
         } else{
-            clientSession.setName(message.getText());
+            clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
         }

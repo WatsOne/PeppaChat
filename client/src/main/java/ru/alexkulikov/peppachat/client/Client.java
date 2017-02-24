@@ -50,10 +50,10 @@ public class Client implements ConnectionEventListener, DataProducer {
                             throw new ConnectionException("Session is null");
                         }
 
-                        if (StringUtils.isEmpty(session.getName())) {
-                            queue.put(buildMessage(line, Command.REGISTER));
-                        } else {
+                        if (isRegister()) {
                             queue.put(buildMessage(line, Command.MESSAGE));
+                        } else {
+                            queue.put(buildMessage(line, Command.REGISTER));
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -98,14 +98,16 @@ public class Client implements ConnectionEventListener, DataProducer {
                 case REGISTER:
                     this.session = message.getSession();
                     System.out.println("### " + message.getText());
-                    queue.put(buildMessage("", Command.HISTORY));
-                    connection.notifyToSend();
+                    if (isRegister()) {
+                        queue.put(gson.toJson(new Message(session, Command.HISTORY, null)));
+                        connection.notifyToSend();
+                    }
                     break;
                 case SERVER_MESSAGE:
                     System.out.println("### " + message.getText());
                     break;
                 case HISTORY:
-                    queue.put(buildMessage("", Command.HISTORY));
+                    queue.put(gson.toJson(new Message(session, Command.HISTORY, null)));
                     connection.notifyToSend();
                 case MESSAGE:
                     System.out.println(message.getText());
@@ -116,6 +118,9 @@ public class Client implements ConnectionEventListener, DataProducer {
         } catch (Exception e) {
             System.out.println(e);
         }
+    }
 
+    private boolean isRegister() {
+        return !StringUtils.isEmpty(session.getUserName());
     }
 }

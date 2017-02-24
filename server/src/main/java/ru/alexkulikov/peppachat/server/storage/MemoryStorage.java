@@ -19,12 +19,12 @@ public class MemoryStorage implements Storage {
 
     @Override
     public void saveSession(Session session) {
-        sessions.put(session.getName(), session);
+        sessions.put(session.getUserName(), session);
     }
 
     @Override
-    public Session getSession(String name) {
-        return sessions.get(name);
+    public Session getSession(String userName) {
+        return sessions.get(userName);
     }
 
     @Override
