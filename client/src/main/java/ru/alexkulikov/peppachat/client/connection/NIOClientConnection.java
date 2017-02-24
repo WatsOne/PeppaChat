@@ -12,6 +12,8 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 
+import org.apache.commons.lang3.StringUtils;
+
 import static java.nio.ByteBuffer.allocate;
 import static java.nio.channels.SelectionKey.OP_CONNECT;
 import static java.nio.channels.SelectionKey.OP_READ;
@@ -75,7 +77,7 @@ public class NIOClientConnection implements ClientConnection {
 
                 if (socketKey.isConnectable()) {
                     socket.finishConnect();
-                    socketKey.interestOps(OP_WRITE);
+                    socketKey.interestOps(OP_READ);
                 } else if (socketKey.isReadable()) {
                     buffer.clear();
                     socket.read(buffer);

@@ -11,7 +11,7 @@ import java.util.Queue;
 public class MemoryStorage implements Storage {
 
     private EvictingQueue<Message> messages;
-    private Map<Long, Session> sessions;
+    private Map<String, Session> sessions;
 
     public MemoryStorage() {
         messages = EvictingQueue.create(100);
@@ -20,12 +20,12 @@ public class MemoryStorage implements Storage {
 
     @Override
     public void saveSession(Session session) {
-        sessions.put(session.getId(), session);
+        sessions.put(session.getName(), session);
     }
 
     @Override
     public Session getSession(String name) {
-        return null;
+        return sessions.get(name);
     }
 
     @Override

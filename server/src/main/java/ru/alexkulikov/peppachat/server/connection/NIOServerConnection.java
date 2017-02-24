@@ -1,6 +1,9 @@
 package ru.alexkulikov.peppachat.server.connection;
 
 import com.google.gson.Gson;
+import ru.alexkulikov.peppachat.server.Server;
+import ru.alexkulikov.peppachat.shared.Command;
+import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 import ru.alexkulikov.peppachat.shared.Message;
@@ -13,7 +16,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 
 public class NIOServerConnection implements ServerConnection {
 
@@ -22,6 +27,10 @@ public class NIOServerConnection implements ServerConnection {
     private ServerSocketChannel socket;
 
     private ConnectionEventListener listener;
+    private Map<Long, SelectionKey> connections = new HashMap<>();
+    private Gson gson = new Gson();
+
+    private Long id = 1L;
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -75,9 +84,13 @@ public class NIOServerConnection implements ServerConnection {
     }
 
     private void processAccept(SelectionKey key) throws IOException {
-        SocketChannel clientSocket = ((ServerSocketChannel) key.channel()).accept();
-        clientSocket.configureBlocking(false);
-        clientSocket.register(selector, SelectionKey.OP_READ);
+        SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
+        channel.configureBlocking(false);
+        SelectionKey clientKey = channel.register(selector, SelectionKey.OP_READ);
+
+        connections.put(id, clientKey);
+        channel.write(ByteBuffer.wrap(buildIdMessage(id).getBytes()));
+        id++;
     }
 
     private void processRead(SelectionKey key) throws IOException {
@@ -96,19 +109,24 @@ public class NIOServerConnection implements ServerConnection {
         }
 
         System.out.println("+++ " + message);
-        Message m = new Gson().fromJson(message, Message.class);
-
-        if (m.getText().equals("ww")) {
-            write(key);
-        }
+        listener.onDataArrived(message);
     }
 
-    private void write(SelectionKey key) throws IOException {
-        SocketChannel clientChannel = (SocketChannel) key.channel();
+    private String buildIdMessage(Long id) throws IOException {
         Message message = new Message();
-        message.setText("HEELO! FROM SERVER");
-        clientChannel.write(ByteBuffer.wrap(new Gson().toJson(message, Message.class).getBytes()));
-        key.interestOps(SelectionKey.OP_READ);
+        Session session = new Session();
+        session.setId(id);
+        message.setSession(session);
+        message.setCommand(Command.ID);
+        return gson.toJson(message, Message.class);
+    }
+
+    private String buildMessage(Session session, String text, Command command) {
+        Message message = new Message();
+        message.setSession(session);
+        message.setCommand(command);
+        message.setText(text);
+        return gson.toJson(message, Message.class);
     }
 
     @Override
@@ -119,6 +137,17 @@ public class NIOServerConnection implements ServerConnection {
     private void checkSetup() throws ConnectionException {
         if (socket == null || selector == null) {
             throw new ConnectionException("Connection doesn't setup");
+        }
+    }
+
+    @Override
+    public void write(Session session, String text, Command command) {
+        try {
+            SelectionKey key = connections.get(session.getId());
+            SocketChannel clientChannel = (SocketChannel) key.channel();
+            clientChannel.write(ByteBuffer.wrap(buildMessage(session, text, command).getBytes()));
+        } catch (Exception e) {
+            System.out.println(e.getMessage());
         }
     }
 }
