@@ -1,6 +1,8 @@
 package ru.alexkulikov.peppachat.client.connection;
 
 import ru.alexkulikov.peppachat.shared.*;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

@@ -2,10 +2,10 @@ package ru.alexkulikov.peppachat.client;
 
 import com.google.gson.Gson;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
-import ru.alexkulikov.peppachat.shared.ConnectionException;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;
-import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.Message;
 
 import java.util.Scanner;

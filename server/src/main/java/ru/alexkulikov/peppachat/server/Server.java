@@ -2,7 +2,7 @@ package ru.alexkulikov.peppachat.server;
 
 import ru.alexkulikov.peppachat.server.connection.ServerConnection;
 import ru.alexkulikov.peppachat.server.connection.ServerConnectionFabric;
-import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 
 public class Server implements ConnectionEventListener {
     private static final int PORT = 10521;

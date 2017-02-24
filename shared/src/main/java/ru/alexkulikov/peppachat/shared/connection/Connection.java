@@ -1,4 +1,4 @@
-package ru.alexkulikov.peppachat.shared;
+package ru.alexkulikov.peppachat.shared.connection;
 
 import java.io.IOException;
 

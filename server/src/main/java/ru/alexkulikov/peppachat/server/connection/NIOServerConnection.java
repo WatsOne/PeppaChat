@@ -1,8 +1,8 @@
 package ru.alexkulikov.peppachat.server.connection;
 
 import com.google.gson.Gson;
-import ru.alexkulikov.peppachat.shared.ConnectionEventListener;
-import ru.alexkulikov.peppachat.shared.ConnectionException;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
+import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
 
