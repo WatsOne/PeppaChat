@@ -72,7 +72,7 @@ public class Server implements ConnectionEventListener {
         Session serverSession = storage.getSession(message.getText());
         Session clientSession = message.getSession();
         if (serverSession != null) {
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already registered")));
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:")));
         } else{
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());

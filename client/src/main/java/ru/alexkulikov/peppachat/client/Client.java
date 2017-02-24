@@ -31,8 +31,6 @@ public class Client implements ConnectionEventListener, DataProducer {
         connection.setEventListener(this);
         connection.setDataProducer(this);
 
-        System.out.println("### Welcome to PeppaChat! Please enter your name:");
-
         new Thread(() -> {
             Scanner scanner = new Scanner(System.in);
             while (true) {
@@ -51,9 +49,9 @@ public class Client implements ConnectionEventListener, DataProducer {
                         }
 
                         if (isRegister()) {
-                            queue.put(buildMessage(line, Command.MESSAGE));
+                            queue.put(gson.toJson(new Message(session, Command.MESSAGE, line)));
                         } else {
-                            queue.put(buildMessage(line, Command.REGISTER));
+                            queue.put(gson.toJson(new Message(session, Command.REGISTER, line)));
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -73,14 +71,6 @@ public class Client implements ConnectionEventListener, DataProducer {
         new Client().run();
     }
 
-    private String buildMessage(String text, Command command) {
-        Message message = new Message();
-        message.setText(text);
-        message.setSession(session);
-        message.setCommand(command);
-        return gson.toJson(message);
-    }
-
     @Override
     public String getDataToSend() {
         return queue.poll();
@@ -92,7 +82,8 @@ public class Client implements ConnectionEventListener, DataProducer {
             Message message = gson.fromJson(messageStr, Message.class);
             switch (message.getCommand()) {
                 case ID:
-                    System.out.println("### Get id: " + message.getSession().getId());
+                    System.out.println("### Successfully connected, id: " + message.getSession().getId());
+                    System.out.println("### Welcome to PeppaChat! Please enter your name:");
                     this.session = message.getSession();
                     break;
                 case REGISTER:
