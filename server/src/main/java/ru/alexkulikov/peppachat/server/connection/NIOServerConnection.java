@@ -1,7 +1,6 @@
 package ru.alexkulikov.peppachat.server.connection;
 
 import com.google.gson.Gson;
-import ru.alexkulikov.peppachat.server.ChangeRequest;
 import ru.alexkulikov.peppachat.shared.Command;
 import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
@@ -20,7 +19,6 @@ import java.util.*;
 
 import static java.nio.channels.SelectionKey.OP_ACCEPT;
 import static java.nio.channels.SelectionKey.OP_READ;
-import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOServerConnection implements ServerConnection {
 
@@ -29,14 +27,10 @@ public class NIOServerConnection implements ServerConnection {
     private ServerSocketChannel socket;
 
     private ConnectionEventListener listener;
-    //    private Map<Long, SelectionKey> connections = new HashMap<>();
-    private Map<Long, SocketChannel> connections = new HashMap<>();
+    private Map<Long, SelectionKey> connections = new HashMap<>();
     private Gson gson = new Gson();
 
     private Long id = 1L;
-
-    private final List<ChangeRequest> changeRequests = new LinkedList<>();
-    private final Map<SocketChannel, List<ByteBuffer>> pendingData = new HashMap<>();
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -66,19 +60,6 @@ public class NIOServerConnection implements ServerConnection {
 
         while (socket.isOpen()) {
 
-            synchronized (changeRequests) {
-                for (ChangeRequest change : changeRequests) {
-                    switch (change.type) {
-                        case ChangeRequest.CHANGEOPS:
-                            SelectionKey key = change.socket.keyFor(selector);
-                            key.interestOps(change.ops);
-                            break;
-                        default:
-                    }
-                }
-                changeRequests.clear();
-            }
-
             selector.select();
             socketIterator = selector.selectedKeys().iterator();
 
@@ -93,10 +74,6 @@ public class NIOServerConnection implements ServerConnection {
                 if (socketKey.isReadable()) {
                     processRead(socketKey);
                 }
-
-                if (socketKey.isWritable()) {
-                    write2(socketKey);
-                }
             }
         }
     }
@@ -109,9 +86,9 @@ public class NIOServerConnection implements ServerConnection {
     private void processAccept(SelectionKey key) throws IOException {
         SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
         channel.configureBlocking(false);
-        channel.register(selector, OP_READ);
+        SelectionKey clientKey = channel.register(selector, OP_READ);
 
-        connections.put(id, channel);
+        connections.put(id, clientKey);
         channel.write(ByteBuffer.wrap(buildIdMessage(id).getBytes()));
         id++;
     }
@@ -157,47 +134,20 @@ public class NIOServerConnection implements ServerConnection {
     }
 
     @Override
-    public void write(Long sessionId, String message) {
-//        try {
-//            SelectionKey key = connections.get(sessionId);
-//            SocketChannel clientChannel = (SocketChannel) key.channel();
-//            clientChannel.write(ByteBuffer.wrap(message.getBytes()));
-//        } catch (Exception e) {
-//            System.out.println(e.getMessage());
-//        }
-
-
-        synchronized (changeRequests) {
-            SocketChannel channel = connections.get(sessionId);
-            changeRequests.add(new ChangeRequest(channel, ChangeRequest.CHANGEOPS, OP_WRITE));
-            synchronized (pendingData) {
-                List<ByteBuffer> queue = pendingData.get(channel);
-                if (queue == null) {
-                    queue = new ArrayList<>();
-                    pendingData.put(channel, queue);
-                }
-                queue.add(ByteBuffer.wrap(message.getBytes()));
-            }
-        }
-        selector.wakeup();
+    public void send(Long sessionId, String message) throws IOException {
+        SelectionKey key = connections.get(sessionId);
+        SocketChannel channel = (SocketChannel) key.channel();
+        channel.write(ByteBuffer.wrap(message.getBytes()));
     }
 
-    private void write2(SelectionKey key) throws IOException {
-        SocketChannel socketChannel = (SocketChannel) key.channel();
-        synchronized (pendingData) {
-            List<ByteBuffer> queue = pendingData.get(socketChannel);
-            while (!queue.isEmpty()) {
-                ByteBuffer buf = queue.get(0);
-                socketChannel.write(buf);
-                if (buf.remaining() > 0) {
-                    break;
-                }
-                System.out.println("Send echo = " + new String(queue.get(0).array()));
-                queue.remove(0);
+    @Override
+    public void sendBroadcast(String message) throws IOException {
+        connections.forEach((i, k) -> {
+            try {
+                SocketChannel channel = (SocketChannel) k.channel();
+                channel.write(ByteBuffer.wrap(message.getBytes()));
+            } catch (IOException e) {
             }
-            if (queue.isEmpty()) {
-                key.interestOps(OP_READ);
-            }
-        }
+        });
     }
 }

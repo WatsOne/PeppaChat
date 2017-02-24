@@ -52,17 +52,10 @@ public class Server implements ConnectionEventListener {
                     register(message);
                     break;
                 case HISTORY:
-                    Long id = message.getSession().getId();
-                    if (!histories.containsKey(id)) {
-                        histories.put(id, storage.getLastMessages());
-                    }
-
-                    LinkedList<Message> queue = histories.get(id);
-                    if (queue.size() == 0) {
-                        System.out.println("DONE");
-                    } else {
-                        worker.submit(new MessageEvent(connection, buildMessage(message.getSession(), queue.poll().getText(), Command.HISTORY)));
-                    }
+                    loadHistory(message);
+                    break;
+                case MESSAGE:
+                    sendMessage(message);
                     break;
             }
         } catch (Exception e) {
@@ -70,31 +63,35 @@ public class Server implements ConnectionEventListener {
         }
     }
 
-    private Message buildMessage(Session session, String text, Command command) {
-        Message message = new Message();
-        message.setSession(session);
-        message.setCommand(command);
-        message.setText(text);
-        return message;
+    private void sendMessage(Message message) {
+        storage.saveMessage(message);
+        message.setText(message.getSession().getName() + ": " + message.getText());
+        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
     }
 
     private void register(Message message) throws IOException {
         Session serverSession = storage.getSession(message.getText());
         Session clientSession = message.getSession();
-        if (serverSession == null) {
+        if (serverSession != null) {
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already registered")));
+        } else{
             clientSession.setName(message.getText());
             storage.saveSession(message.getSession());
-//            for (int i = 1; i < 101; i++) {
-                worker.submit(new MessageEvent(connection, buildMessage(clientSession, "Successfully register!", Command.REGISTER)));
-//            }
-//            for (int i = 1; i < 101; i++) {
-                //connection.write(clientSession.getId(), buildMessage(clientSession, "Successfully register!", Command.REGISTER));
-//            }
-//            for (int i = 1; i < 101; i++) {
-//                connection.write(clientSession, "x" + i, Command.SERVER_MESSAGE);
-//            }
-        } else{
-//                connection.write(message.getSession(), "User already registered", Command.REGISTER);
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
+        }
+    }
+
+    private void loadHistory(Message message) throws IOException {
+        Long id = message.getSession().getId();
+        if (!histories.containsKey(id)) {
+            histories.put(id, storage.getLastMessages());
+        }
+
+        LinkedList<Message> queue = histories.get(id);
+        if (queue.size() == 0) {
+            histories.remove(id);
+        } else {
+            worker.submit(new MessageEvent(connection, new Message(message.getSession(), Command.HISTORY, queue.poll().getText())));
         }
     }
 }

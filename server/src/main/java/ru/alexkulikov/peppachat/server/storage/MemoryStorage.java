@@ -15,12 +15,6 @@ public class MemoryStorage implements Storage {
     public MemoryStorage() {
         messages = EvictingQueue.create(100);
         sessions = new HashMap<>();
-
-        for (int i = 0; i < 100; i++) {
-            Message message = new Message();
-            message.setText("Hello" + i);
-            saveMessage(message);
-        }
     }
 
     @Override

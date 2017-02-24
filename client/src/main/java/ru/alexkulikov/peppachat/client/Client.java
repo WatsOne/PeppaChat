@@ -89,7 +89,6 @@ public class Client implements ConnectionEventListener, DataProducer {
     @Override
     public void onDataArrived(String messageStr) {
         try {
-            System.out.println(messageStr);
             Message message = gson.fromJson(messageStr, Message.class);
             switch (message.getCommand()) {
                 case ID:
@@ -106,9 +105,11 @@ public class Client implements ConnectionEventListener, DataProducer {
                     System.out.println("### " + message.getText());
                     break;
                 case HISTORY:
-                    System.out.println("### " + message.getText());
                     queue.put(buildMessage("", Command.HISTORY));
                     connection.notifyToSend();
+                case MESSAGE:
+                    System.out.println(message.getText());
+                    break;
                 default:
                     System.out.println(message.getText());
             }
