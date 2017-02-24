@@ -4,9 +4,8 @@ import com.google.common.collect.EvictingQueue;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Queue;
+import java.util.*;
+import java.util.stream.Collectors;
 
 public class MemoryStorage implements Storage {
 
@@ -16,6 +15,12 @@ public class MemoryStorage implements Storage {
     public MemoryStorage() {
         messages = EvictingQueue.create(100);
         sessions = new HashMap<>();
+
+        for (int i = 0; i < 100; i++) {
+            Message message = new Message();
+            message.setText("Hello" + i);
+            saveMessage(message);
+        }
     }
 
     @Override
@@ -34,7 +39,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public Queue<Message> getLastMessages() {
-        return messages;
+    public LinkedList<Message> getLastMessages() {
+        return messages.stream().collect(Collectors.toCollection(LinkedList::new));
     }
 }

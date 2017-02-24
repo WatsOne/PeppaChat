@@ -23,9 +23,10 @@ public class Client implements ConnectionEventListener, DataProducer {
     private BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
     private Session session;
     private Gson gson = new Gson();
+    private ClientConnection connection;
 
     private void run() throws Exception {
-        ClientConnection connection = ClientConnectionFabric.getClientConnection();
+        connection = ClientConnectionFabric.getClientConnection();
         connection.setup(HOST, PORT);
         connection.setEventListener(this);
         connection.setDataProducer(this);
@@ -50,9 +51,9 @@ public class Client implements ConnectionEventListener, DataProducer {
                         }
 
                         if (StringUtils.isEmpty(session.getName())) {
-                            queue.put(buildRegisterMessage(line));
+                            queue.put(buildMessage(line, Command.REGISTER));
                         } else {
-                            queue.put(buildMessage(line));
+                            queue.put(buildMessage(line, Command.MESSAGE));
                         }
                     } catch (InterruptedException e) {
                         e.printStackTrace();
@@ -72,18 +73,11 @@ public class Client implements ConnectionEventListener, DataProducer {
         new Client().run();
     }
 
-    private String buildRegisterMessage(String userName) {
-        Message message = new Message();
-        message.setText(userName);
-        message.setSession(session);
-        message.setCommand(Command.REGISTER);
-        return gson.toJson(message);
-    }
-
-    private String buildMessage(String text) {
+    private String buildMessage(String text, Command command) {
         Message message = new Message();
         message.setText(text);
         message.setSession(session);
+        message.setCommand(command);
         return gson.toJson(message);
     }
 
@@ -94,21 +88,32 @@ public class Client implements ConnectionEventListener, DataProducer {
 
     @Override
     public void onDataArrived(String messageStr) {
-        Message message = gson.fromJson(messageStr, Message.class);
-        switch (message.getCommand()) {
-            case ID:
-                System.out.println("### Get id: " + message.getSession().getId());
-                this.session = message.getSession();
-                break;
-            case REGISTER:
-                this.session = message.getSession();
-                System.out.println("### " + message.getText());
-                break;
-            case SERVER_MESSAGE:
-                System.out.println("### " + message.getText());
-                break;
-            default:
-                System.out.println(message.getText());
+        try {
+            System.out.println(messageStr);
+            Message message = gson.fromJson(messageStr, Message.class);
+            switch (message.getCommand()) {
+                case ID:
+                    System.out.println("### Get id: " + message.getSession().getId());
+                    this.session = message.getSession();
+                    break;
+                case REGISTER:
+                    this.session = message.getSession();
+                    System.out.println("### " + message.getText());
+                    queue.put(buildMessage("", Command.HISTORY));
+                    connection.notifyToSend();
+                    break;
+                case SERVER_MESSAGE:
+                    System.out.println("### " + message.getText());
+                    break;
+                case HISTORY:
+                    System.out.println("### " + message.getText());
+                    queue.put(buildMessage("", Command.HISTORY));
+                    connection.notifyToSend();
+                default:
+                    System.out.println(message.getText());
+            }
+        } catch (Exception e) {
+            System.out.println(e);
         }
 
     }

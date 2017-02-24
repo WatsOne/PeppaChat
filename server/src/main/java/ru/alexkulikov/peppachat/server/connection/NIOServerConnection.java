@@ -1,7 +1,7 @@
 package ru.alexkulikov.peppachat.server.connection;
 
 import com.google.gson.Gson;
-import ru.alexkulikov.peppachat.server.Server;
+import ru.alexkulikov.peppachat.server.ChangeRequest;
 import ru.alexkulikov.peppachat.shared.Command;
 import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
@@ -16,9 +16,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
+
+import static java.nio.channels.SelectionKey.OP_ACCEPT;
+import static java.nio.channels.SelectionKey.OP_READ;
+import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOServerConnection implements ServerConnection {
 
@@ -27,10 +29,14 @@ public class NIOServerConnection implements ServerConnection {
     private ServerSocketChannel socket;
 
     private ConnectionEventListener listener;
-    private Map<Long, SelectionKey> connections = new HashMap<>();
+    //    private Map<Long, SelectionKey> connections = new HashMap<>();
+    private Map<Long, SocketChannel> connections = new HashMap<>();
     private Gson gson = new Gson();
 
     private Long id = 1L;
+
+    private final List<ChangeRequest> changeRequests = new LinkedList<>();
+    private final Map<SocketChannel, List<ByteBuffer>> pendingData = new HashMap<>();
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -50,7 +56,7 @@ public class NIOServerConnection implements ServerConnection {
         socket.bind(new InetSocketAddress(host, port));
         socket.configureBlocking(false);
 
-        socket.register(selector, SelectionKey.OP_ACCEPT);
+        socket.register(selector, OP_ACCEPT);
     }
 
     @Override
@@ -59,6 +65,19 @@ public class NIOServerConnection implements ServerConnection {
         SelectionKey socketKey;
 
         while (socket.isOpen()) {
+
+            synchronized (changeRequests) {
+                for (ChangeRequest change : changeRequests) {
+                    switch (change.type) {
+                        case ChangeRequest.CHANGEOPS:
+                            SelectionKey key = change.socket.keyFor(selector);
+                            key.interestOps(change.ops);
+                            break;
+                        default:
+                    }
+                }
+                changeRequests.clear();
+            }
 
             selector.select();
             socketIterator = selector.selectedKeys().iterator();
@@ -74,6 +93,10 @@ public class NIOServerConnection implements ServerConnection {
                 if (socketKey.isReadable()) {
                     processRead(socketKey);
                 }
+
+                if (socketKey.isWritable()) {
+                    write2(socketKey);
+                }
             }
         }
     }
@@ -86,9 +109,9 @@ public class NIOServerConnection implements ServerConnection {
     private void processAccept(SelectionKey key) throws IOException {
         SocketChannel channel = ((ServerSocketChannel) key.channel()).accept();
         channel.configureBlocking(false);
-        SelectionKey clientKey = channel.register(selector, SelectionKey.OP_READ);
+        channel.register(selector, OP_READ);
 
-        connections.put(id, clientKey);
+        connections.put(id, channel);
         channel.write(ByteBuffer.wrap(buildIdMessage(id).getBytes()));
         id++;
     }
@@ -121,13 +144,6 @@ public class NIOServerConnection implements ServerConnection {
         return gson.toJson(message, Message.class);
     }
 
-    private String buildMessage(Session session, String text, Command command) {
-        Message message = new Message();
-        message.setSession(session);
-        message.setCommand(command);
-        message.setText(text);
-        return gson.toJson(message, Message.class);
-    }
 
     @Override
     public boolean isAlive() {
@@ -141,13 +157,47 @@ public class NIOServerConnection implements ServerConnection {
     }
 
     @Override
-    public void write(Session session, String text, Command command) {
-        try {
-            SelectionKey key = connections.get(session.getId());
-            SocketChannel clientChannel = (SocketChannel) key.channel();
-            clientChannel.write(ByteBuffer.wrap(buildMessage(session, text, command).getBytes()));
-        } catch (Exception e) {
-            System.out.println(e.getMessage());
+    public void write(Long sessionId, String message) {
+//        try {
+//            SelectionKey key = connections.get(sessionId);
+//            SocketChannel clientChannel = (SocketChannel) key.channel();
+//            clientChannel.write(ByteBuffer.wrap(message.getBytes()));
+//        } catch (Exception e) {
+//            System.out.println(e.getMessage());
+//        }
+
+
+        synchronized (changeRequests) {
+            SocketChannel channel = connections.get(sessionId);
+            changeRequests.add(new ChangeRequest(channel, ChangeRequest.CHANGEOPS, OP_WRITE));
+            synchronized (pendingData) {
+                List<ByteBuffer> queue = pendingData.get(channel);
+                if (queue == null) {
+                    queue = new ArrayList<>();
+                    pendingData.put(channel, queue);
+                }
+                queue.add(ByteBuffer.wrap(message.getBytes()));
+            }
+        }
+        selector.wakeup();
+    }
+
+    private void write2(SelectionKey key) throws IOException {
+        SocketChannel socketChannel = (SocketChannel) key.channel();
+        synchronized (pendingData) {
+            List<ByteBuffer> queue = pendingData.get(socketChannel);
+            while (!queue.isEmpty()) {
+                ByteBuffer buf = queue.get(0);
+                socketChannel.write(buf);
+                if (buf.remaining() > 0) {
+                    break;
+                }
+                System.out.println("Send echo = " + new String(queue.get(0).array()));
+                queue.remove(0);
+            }
+            if (queue.isEmpty()) {
+                key.interestOps(OP_READ);
+            }
         }
     }
 }

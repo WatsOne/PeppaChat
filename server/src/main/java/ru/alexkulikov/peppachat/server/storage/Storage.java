@@ -3,6 +3,8 @@ package ru.alexkulikov.peppachat.server.storage;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Queue;
 
 public interface Storage {
@@ -12,6 +14,5 @@ public interface Storage {
 
     void saveMessage(Message message);
 
-    Queue<Message> getLastMessages();
-
+    LinkedList<Message> getLastMessages();
 }

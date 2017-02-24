@@ -5,5 +5,7 @@ public enum Command {
     MESSAGE,
     SERVER_MESSAGE,
 
-    ID
+    ID,
+    HISTORY,
+    HISTORY_END
 }
