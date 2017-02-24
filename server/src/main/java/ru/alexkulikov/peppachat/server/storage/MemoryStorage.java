@@ -33,7 +33,7 @@ public class MemoryStorage implements Storage {
     }
 
     @Override
-    public LinkedList<Message> getLastMessages() {
-        return messages.stream().collect(Collectors.toCollection(LinkedList::new));
+    public String getLastMessages() {
+        return messages.stream().map(Message::getText).collect(Collectors.joining("\n"));
     }
 }

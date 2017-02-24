@@ -24,7 +24,6 @@ public class Server implements ConnectionEventListener {
     private ServerConnection connection;
 
     private MessageWorker worker = new MessageWorker();
-    private Map<Long, LinkedList<Message>> histories = new HashMap<>();
 
     private void run() throws Exception {
         new Thread(worker).start();
@@ -50,9 +49,6 @@ public class Server implements ConnectionEventListener {
                 case REGISTER:
                     register(message);
                     break;
-                case HISTORY:
-                    loadHistory(message);
-                    break;
                 case MESSAGE:
                     sendMessage(message);
                     break;
@@ -77,20 +73,7 @@ public class Server implements ConnectionEventListener {
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
-        }
-    }
-
-    private void loadHistory(Message message) throws IOException {
-        Long id = message.getSession().getId();
-        if (!histories.containsKey(id)) {
-            histories.put(id, storage.getLastMessages());
-        }
-
-        LinkedList<Message> queue = histories.get(id);
-        if (queue.size() == 0) {
-            histories.remove(id);
-        } else {
-            worker.submit(new MessageEvent(connection, new Message(message.getSession(), Command.HISTORY, queue.poll().getText())));
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, storage.getLastMessages())));
         }
     }
 }

@@ -89,17 +89,10 @@ public class Client implements ConnectionEventListener, DataProducer {
                 case REGISTER:
                     this.session = message.getSession();
                     System.out.println("### " + message.getText());
-                    if (isRegister()) {
-                        queue.put(gson.toJson(new Message(session, Command.HISTORY, null)));
-                        connection.notifyToSend();
-                    }
                     break;
                 case SERVER_MESSAGE:
                     System.out.println("### " + message.getText());
                     break;
-                case HISTORY:
-                    queue.put(gson.toJson(new Message(session, Command.HISTORY, null)));
-                    connection.notifyToSend();
                 case MESSAGE:
                     System.out.println(message.getText());
                     break;

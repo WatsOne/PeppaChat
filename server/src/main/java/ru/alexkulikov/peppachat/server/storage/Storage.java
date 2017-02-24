@@ -14,5 +14,5 @@ public interface Storage {
 
     void saveMessage(Message message);
 
-    LinkedList<Message> getLastMessages();
+    String getLastMessages();
 }

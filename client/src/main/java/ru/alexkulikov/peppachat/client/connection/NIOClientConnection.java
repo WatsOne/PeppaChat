@@ -1,6 +1,5 @@
 package ru.alexkulikov.peppachat.client.connection;
 
-import ru.alexkulikov.peppachat.shared.*;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 
@@ -26,7 +25,7 @@ public class NIOClientConnection implements ClientConnection {
     private DataProducer dataProducer;
     private ConnectionEventListener listener;
 
-    private ByteBuffer buffer = allocate(256);
+    private ByteBuffer buffer = allocate(2048);
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -79,10 +78,17 @@ public class NIOClientConnection implements ClientConnection {
                     socketKey.interestOps(OP_READ);
                 } else if (socketKey.isReadable()) {
                     buffer.clear();
-                    socket.read(buffer);
-                    String message = SocketUtils.getBufferData(buffer);
+                    int read = 0;
+                    StringBuilder builder = new StringBuilder();
+                    while ((read = socket.read(buffer)) > 0) {
+                        buffer.flip();
+                        byte[] bytes = new byte[buffer.limit()];
+                        buffer.get(bytes);
+                        builder.append(new String(bytes));
+                        buffer.clear();
+                    }
 
-                    listener.onDataArrived(message);
+                    listener.onDataArrived(builder.toString());
                 } else if (socketKey.isWritable()) {
                     String message = dataProducer.getDataToSend();
                     if (!StringUtils.isEmpty(message)) {
