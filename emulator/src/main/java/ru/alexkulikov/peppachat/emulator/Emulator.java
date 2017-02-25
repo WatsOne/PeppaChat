@@ -1,18 +1,30 @@
 package ru.alexkulikov.peppachat.emulator;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
+
 public class Emulator {
+
+    private List<Bot> bots = new ArrayList<>();
+    private int botNumber = 0;
+    private Random rnd = new Random();
+
+    private void run() {
+        while (true) {
+            try {
+                Thread.sleep(1000 * rnd.nextInt(10));
+                Bot bot = new Bot();
+                bots.add(bot);
+                new Thread(() -> bot.start("bot" + botNumber)).start();
+                botNumber++;
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public static void main(String[] args) throws Exception {
-        new Thread(() -> new Bot().start("bot1")).start();
-        new Thread(() -> new Bot().start("bot2")).start();
-        new Thread(() -> new Bot().start("bot3")).start();
-        new Thread(() -> new Bot().start("bot4")).start();
-        new Thread(() -> new Bot().start("bot5")).start();
-        new Thread(() -> new Bot().start("bot6")).start();
-        new Thread(() -> new Bot().start("bot7")).start();
-        new Thread(() -> new Bot().start("bot8")).start();
-        new Thread(() -> new Bot().start("bot9")).start();
-        new Thread(() -> new Bot().start("bot10")).start();
-        new Thread(() -> new Bot().start("bot11")).start();
-        new Thread(() -> new Bot().start("bot12")).start();
+        new Emulator().run();
     }
 }

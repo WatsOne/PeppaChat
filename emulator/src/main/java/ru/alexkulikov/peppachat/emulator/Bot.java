@@ -39,25 +39,25 @@ public class Bot implements ConnectionEventListener, DataProducer {
                 try {
                     while (true) {
                         Thread.sleep(1000 * rnd.nextInt(10) + 500);
-                        queue.put(gson.toJson(new Message(session, Command.MESSAGE, randomString(rnd.nextInt(20)))));
+                        queue.put(gson.toJson(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20)))));
                         connection.notifyToSend();
                     }
                 } catch (Exception e) {
-
+                    e.printStackTrace();
                 }
             }).start();
 
             connection.start();
-
         } catch (Exception e) {
-
+            e.printStackTrace();
         }
     }
 
-    private String randomString(int len) {
+    private String getRandomString(int len) {
         StringBuilder sb = new StringBuilder(len);
-        for(int i = 0; i < len; i++)
+        for(int i = 0; i < len; i++) {
             sb.append(chars.charAt(rnd.nextInt(chars.length())));
+        }
         return sb.toString();
     }
 
@@ -98,9 +98,5 @@ public class Bot implements ConnectionEventListener, DataProducer {
     @Override
     public void onDisconnect(Long sessionId) {
         System.out.println("### Server shutdown, try to restart the app");
-    }
-
-    private boolean isRegister() {
-        return !StringUtils.isEmpty(session.getUserName());
     }
 }
