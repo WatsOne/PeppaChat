@@ -38,7 +38,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
             new Thread(() -> {
                 try {
                     while (true) {
-                        Thread.sleep(1000 * rnd.nextInt(10));
+                        Thread.sleep(1000 * rnd.nextInt(10) + 500);
                         queue.put(gson.toJson(new Message(session, Command.MESSAGE, randomString(rnd.nextInt(20)))));
                         connection.notifyToSend();
                     }
@@ -85,7 +85,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
                     System.out.println("### " + message.getText());
                     break;
                 case MESSAGE:
-                    System.out.println(message.getText());
+                    System.out.println("(" + botName + ") " + message.getText());
                     break;
                 default:
                     System.out.println(message.getText());

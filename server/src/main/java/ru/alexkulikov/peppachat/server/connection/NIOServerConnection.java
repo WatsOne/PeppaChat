@@ -23,7 +23,7 @@ import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOServerConnection implements ServerConnection {
 
-    private ByteBuffer readBuf = ByteBuffer.allocate(256);
+    private ByteBuffer readBuf = ByteBuffer.allocate(8096);
     private Selector selector;
     private ServerSocketChannel socket;
 
@@ -118,6 +118,7 @@ public class NIOServerConnection implements ServerConnection {
         }
 
         String message = SocketUtils.getBufferData(readBuf);
+        System.out.println(message);
         listener.onDataArrived(gson.fromJson(message, Message.class));
     }
 
@@ -153,10 +154,16 @@ public class NIOServerConnection implements ServerConnection {
     private void processWrite(SelectionKey key) throws IOException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
         synchronized (pendingData) {
-            List<Message> queue = pendingData.get(key);
-            socketChannel.write(ByteBuffer.wrap(gson.toJson(queue).getBytes()));
-            queue.clear();
-            key.interestOps(OP_READ);
+            try {
+                List<Message> queue = pendingData.get(key);
+                if (queue.size() > 0) {
+                    socketChannel.write(ByteBuffer.wrap(gson.toJson(queue).getBytes()));
+                    queue.clear();
+                }
+                key.interestOps(OP_READ);
+            } catch (IOException e) {
+//                processUserDisconnect((Long) key.attachment(), socketChannel);
+            }
         }
     }
 

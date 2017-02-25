@@ -10,5 +10,9 @@ public class Emulator {
         new Thread(() -> new Bot().start("bot6")).start();
         new Thread(() -> new Bot().start("bot7")).start();
         new Thread(() -> new Bot().start("bot8")).start();
+        new Thread(() -> new Bot().start("bot9")).start();
+        new Thread(() -> new Bot().start("bot10")).start();
+        new Thread(() -> new Bot().start("bot11")).start();
+        new Thread(() -> new Bot().start("bot12")).start();
     }
 }

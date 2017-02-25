@@ -31,7 +31,7 @@ public class NIOClientConnection implements ClientConnection {
     private DataProducer dataProducer;
     private ConnectionEventListener listener;
 
-    private ByteBuffer buffer = allocate(2048);
+    private ByteBuffer buffer = allocate(8096);
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -110,10 +110,12 @@ public class NIOClientConnection implements ClientConnection {
                 return;
             }
 
-            List<Message> messages = new Gson().fromJson(builder.toString(), new TypeToken<List<Message>>(){}.getType());
+            String concatenateParts = builder.toString().replaceAll("\\]\\[", ",");
+            List<Message> messages = new Gson().fromJson(concatenateParts, new TypeToken<List<Message>>(){}.getType());
             messages.forEach(listener::onDataArrived);
         } catch (IOException e) {
             disconnect();
+        } catch (Exception e) {
         }
     }
 
