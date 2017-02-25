@@ -103,6 +103,11 @@ public class Client implements ConnectionEventListener, DataProducer {
         }
     }
 
+    @Override
+    public void onDisconnect(Long sessionId) {
+
+    }
+
     private boolean isRegister() {
         return !StringUtils.isEmpty(session.getUserName());
     }

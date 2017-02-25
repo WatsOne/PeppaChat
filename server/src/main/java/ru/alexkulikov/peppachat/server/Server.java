@@ -1,6 +1,5 @@
 package ru.alexkulikov.peppachat.server;
 
-import com.google.gson.Gson;
 import ru.alexkulikov.peppachat.server.connection.ServerConnection;
 import ru.alexkulikov.peppachat.server.connection.ServerConnectionFabric;
 import ru.alexkulikov.peppachat.server.storage.Storage;
@@ -11,15 +10,11 @@ import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.Map;
 
 public class Server implements ConnectionEventListener {
     private static final int PORT = 10521;
     private static final String HOST = "localhost";
 
-    private Gson gson = new Gson();
     private Storage storage;
     private ServerConnection connection;
 
@@ -57,6 +52,13 @@ public class Server implements ConnectionEventListener {
         }
     }
 
+    @Override
+    public void onDisconnect(Long sessionId) {
+        Session session = storage.getSession(sessionId);
+        Message message = new Message(session, Command.SERVER_MESSAGE, "User \""+ session.getUserName() + "\" has left the chat.");
+        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
+    }
+
     private void sendMessage(Message message) {
         storage.saveMessage(message);
         message.setText(message.getSession().getUserName() + ": " + message.getText());
@@ -64,9 +66,8 @@ public class Server implements ConnectionEventListener {
     }
 
     private void register(Message message) throws IOException {
-        Session serverSession = storage.getSession(message.getText());
         Session clientSession = message.getSession();
-        if (serverSession != null) {
+        if (userNameExists(message.getText())) {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:")));
         } else{
             clientSession.setUserName(message.getText());
@@ -74,5 +75,9 @@ public class Server implements ConnectionEventListener {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, storage.getLastMessages())));
         }
+    }
+
+    private boolean userNameExists(String userName) {
+        return storage.getAllSession().stream().anyMatch(s -> s.getUserName().equals(userName));
     }
 }

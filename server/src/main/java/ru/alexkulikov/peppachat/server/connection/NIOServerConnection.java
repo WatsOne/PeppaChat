@@ -92,6 +92,7 @@ public class NIOServerConnection implements ServerConnection {
         channel.configureBlocking(false);
         SelectionKey clientKey = channel.register(selector, OP_READ);
 
+        clientKey.attach(id);
         connections.put(id, clientKey);
 
         Session session = new Session();
@@ -104,19 +105,26 @@ public class NIOServerConnection implements ServerConnection {
         SocketChannel clientSocket = (SocketChannel) key.channel();
 
         readBuf.clear();
-        int readCount = clientSocket.read(readBuf);
-
-        String message;
-
-        if (readCount >= 0) {
-            message = SocketUtils.getBufferData(readBuf);
-        } else {
-            message = key.attachment() + " left the chat.\n";
-            clientSocket.close();
+        int readCount = 0;
+        try {
+            readCount = clientSocket.read(readBuf);
+        } catch (IOException e) {
+            processUserDisconnect((Long) key.attachment(), clientSocket);
         }
 
-        System.out.println("+++ " + message);
+        if (readCount < 0) {
+            processUserDisconnect((Long) key.attachment(), clientSocket);
+            return;
+        }
+
+        String message = SocketUtils.getBufferData(readBuf);
         listener.onDataArrived(gson.fromJson(message, Message.class));
+    }
+
+    private void processUserDisconnect(Long sessionId, SocketChannel channel) throws IOException {
+        connections.remove(sessionId);
+        listener.onDisconnect(sessionId);
+        channel.close();
     }
 
     @Override
@@ -165,5 +173,9 @@ public class NIOServerConnection implements ServerConnection {
             } catch (IOException e) {
             }
         });
+    }
+
+    private void sendUserDisconnected() {
+
     }
 }

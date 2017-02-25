@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 public class MemoryStorage implements Storage {
 
     private EvictingQueue<Message> messages;
-    private Map<String, Session> sessions;
+    private Map<Long, Session> sessions;
 
     public MemoryStorage() {
         messages = EvictingQueue.create(100);
@@ -19,12 +19,22 @@ public class MemoryStorage implements Storage {
 
     @Override
     public void saveSession(Session session) {
-        sessions.put(session.getUserName(), session);
+        sessions.put(session.getId(), session);
     }
 
     @Override
-    public Session getSession(String userName) {
-        return sessions.get(userName);
+    public Session getSession(Long sessionId) {
+        return sessions.get(sessionId);
+    }
+
+    @Override
+    public List<Session> getAllSession() {
+        return new ArrayList<>(sessions.values());
+    }
+
+    @Override
+    public void removeSession(Long sessionId) {
+        sessions.remove(sessionId);
     }
 
     @Override

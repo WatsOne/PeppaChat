@@ -10,7 +10,11 @@ import java.util.Queue;
 public interface Storage {
     void saveSession(Session session);
 
-    Session getSession(String name);
+    Session getSession(Long sessionId);
+
+    List<Session> getAllSession();
+
+    void removeSession(Long sessionId);
 
     void saveMessage(Message message);
 

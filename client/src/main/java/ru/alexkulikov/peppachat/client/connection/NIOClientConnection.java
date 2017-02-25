@@ -3,6 +3,7 @@ package ru.alexkulikov.peppachat.client.connection;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ru.alexkulikov.peppachat.shared.Message;
+import ru.alexkulikov.peppachat.shared.SocketUtils;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 
@@ -99,11 +100,7 @@ public class NIOClientConnection implements ClientConnection {
         int read = 0;
         StringBuilder builder = new StringBuilder();
         while ((read = socket.read(buffer)) > 0) {
-            buffer.flip();
-            byte[] bytes = new byte[buffer.limit()];
-            buffer.get(bytes);
-            builder.append(new String(bytes));
-            buffer.clear();
+            builder.append(SocketUtils.getBufferData(buffer));
         }
 
         List<Message> messages = new Gson().fromJson(builder.toString(), new TypeToken<List<Message>>(){}.getType());
