@@ -50,7 +50,11 @@ public class Client implements ConnectionEventListener, DataProducer {
 
                         if (isRegister()) {
                             Command command = Command.getCommand(line);
-                            queue.put(gson.toJson(new Message(session, command == null ? Command.MESSAGE : command, line)));
+                            if (command == Command.HELP) {
+                                System.out.println(Command.getCommandInfo());
+                            } else {
+                                queue.put(gson.toJson(new Message(session, command == null ? Command.MESSAGE : command, line)));
+                            }
                         } else {
                             queue.put(gson.toJson(new Message(session, Command.REGISTER, line)));
                         }
