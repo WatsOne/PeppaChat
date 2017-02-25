@@ -33,11 +33,6 @@ public class NIOServerConnection implements ServerConnection {
     private Long id = 1L;
 
     @Override
-    public void notifyToSend() throws ConnectionException {
-
-    }
-
-    @Override
     public void setEventListener(ConnectionEventListener listener) {
         this.listener = listener;
     }
@@ -89,7 +84,10 @@ public class NIOServerConnection implements ServerConnection {
         SelectionKey clientKey = channel.register(selector, OP_READ);
 
         connections.put(id, clientKey);
-        channel.write(ByteBuffer.wrap(buildIdMessage(id).getBytes()));
+
+        Session session = new Session();
+        session.setId(id);
+        channel.write(ByteBuffer.wrap(gson.toJson(new Message(session, Command.ID)).getBytes()));
         id++;
     }
 
@@ -111,16 +109,6 @@ public class NIOServerConnection implements ServerConnection {
         System.out.println("+++ " + message);
         listener.onDataArrived(message);
     }
-
-    private String buildIdMessage(Long id) throws IOException {
-        Message message = new Message();
-        Session session = new Session();
-        session.setId(id);
-        message.setSession(session);
-        message.setCommand(Command.ID);
-        return gson.toJson(message, Message.class);
-    }
-
 
     @Override
     public boolean isAlive() {

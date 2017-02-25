@@ -74,29 +74,41 @@ public class NIOClientConnection implements ClientConnection {
                 socketIterator.remove();
 
                 if (socketKey.isConnectable()) {
-                    socket.finishConnect();
-                    socketKey.interestOps(OP_READ);
+                    processAccept(socketKey);
                 } else if (socketKey.isReadable()) {
-                    buffer.clear();
-                    int read = 0;
-                    StringBuilder builder = new StringBuilder();
-                    while ((read = socket.read(buffer)) > 0) {
-                        buffer.flip();
-                        byte[] bytes = new byte[buffer.limit()];
-                        buffer.get(bytes);
-                        builder.append(new String(bytes));
-                        buffer.clear();
-                    }
-
-                    listener.onDataArrived(builder.toString());
+                    processRead();
                 } else if (socketKey.isWritable()) {
-                    String message = dataProducer.getDataToSend();
-                    if (!StringUtils.isEmpty(message)) {
-                        socket.write(ByteBuffer.wrap(message.getBytes()));
-                        socketKey.interestOps(OP_READ);
-                    }
+                    processWrite(socketKey);
                 }
             }
+        }
+    }
+
+    private void processAccept(SelectionKey socketKey) throws IOException {
+        socket.finishConnect();
+        socketKey.interestOps(OP_READ);
+    }
+
+    private void processRead() throws IOException {
+        buffer.clear();
+        int read = 0;
+        StringBuilder builder = new StringBuilder();
+        while ((read = socket.read(buffer)) > 0) {
+            buffer.flip();
+            byte[] bytes = new byte[buffer.limit()];
+            buffer.get(bytes);
+            builder.append(new String(bytes));
+            buffer.clear();
+        }
+
+        listener.onDataArrived(builder.toString());
+    }
+
+    private void processWrite(SelectionKey socketKey) throws IOException {
+        String message = dataProducer.getDataToSend();
+        if (!StringUtils.isEmpty(message)) {
+            socket.write(ByteBuffer.wrap(message.getBytes()));
+            socketKey.interestOps(OP_READ);
         }
     }
 

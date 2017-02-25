@@ -3,8 +3,6 @@ package ru.alexkulikov.peppachat.shared.connection;
 import java.io.IOException;
 
 public interface Connection {
-    void notifyToSend() throws ConnectionException;
-
     void setEventListener(ConnectionEventListener listener);
 
     void setup(String host, int port) throws IOException;

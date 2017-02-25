@@ -11,6 +11,12 @@ public class Message implements Serializable {
     public Message() {
     }
 
+    public Message(Session session, Command command) {
+        this.command = command;
+        this.session = session;
+        this.text = null;
+    }
+
     public Message(Session session, Command command, String text) {
         this.session = session;
         this.command = command;
