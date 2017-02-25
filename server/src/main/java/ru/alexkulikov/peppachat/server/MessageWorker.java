@@ -18,14 +18,14 @@ public class MessageWorker implements Runnable {
     public void run() {
         while (true) {
             try {
-                MessageEvent message = sendQueue.poll();
-                switch (message.getMode()) {
+                MessageEvent event = sendQueue.poll();
+                switch (event.getMode()) {
                     case RESPONSE:
-                        Long id = message.getMessage().getSession().getId();
-                        message.getConnection().send(id, gson.toJson(message.getMessage()));
+                        Long id = event.getMessage().getSession().getId();
+                        event.getConnection().send(id, event.getMessage());
                         break;
                     case BROADCAST:
-                        message.getConnection().sendBroadcast(gson.toJson(message.getMessage()));
+                        event.getConnection().sendBroadcast(event.getMessage());
                         break;
                 }
 

@@ -1,5 +1,7 @@
 package ru.alexkulikov.peppachat.shared.connection;
 
+import ru.alexkulikov.peppachat.shared.Message;
+
 public interface ConnectionEventListener {
-    void onDataArrived(String message);
+    void onDataArrived(Message message);
 }

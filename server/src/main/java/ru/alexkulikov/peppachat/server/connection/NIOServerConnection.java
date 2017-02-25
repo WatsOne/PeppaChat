@@ -19,6 +19,7 @@ import java.util.*;
 
 import static java.nio.channels.SelectionKey.OP_ACCEPT;
 import static java.nio.channels.SelectionKey.OP_READ;
+import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOServerConnection implements ServerConnection {
 
@@ -29,6 +30,9 @@ public class NIOServerConnection implements ServerConnection {
     private ConnectionEventListener listener;
     private Map<Long, SelectionKey> connections = new HashMap<>();
     private Gson gson = new Gson();
+
+    private final List<SelectionKey> changeRequests = new LinkedList<>();
+    private final Map<SelectionKey, List<Message>> pendingData = new HashMap<>();
 
     private Long id = 1L;
 
@@ -55,6 +59,11 @@ public class NIOServerConnection implements ServerConnection {
 
         while (socket.isOpen()) {
 
+            synchronized (changeRequests) {
+                changeRequests.stream().forEach(k -> k.interestOps(OP_WRITE));
+                changeRequests.clear();
+            }
+
             selector.select();
             socketIterator = selector.selectedKeys().iterator();
 
@@ -64,10 +73,10 @@ public class NIOServerConnection implements ServerConnection {
 
                 if (socketKey.isAcceptable()) {
                     processAccept(socketKey);
-                }
-
-                if (socketKey.isReadable()) {
+                } else if (socketKey.isReadable()) {
                     processRead(socketKey);
+                } else if (socketKey.isWritable()) {
+                    processWrite(socketKey);
                 }
             }
         }
@@ -87,7 +96,7 @@ public class NIOServerConnection implements ServerConnection {
 
         Session session = new Session();
         session.setId(id);
-        channel.write(ByteBuffer.wrap(gson.toJson(new Message(session, Command.ID)).getBytes()));
+        send(id, new Message(session, Command.ID));
         id++;
     }
 
@@ -107,7 +116,7 @@ public class NIOServerConnection implements ServerConnection {
         }
 
         System.out.println("+++ " + message);
-        listener.onDataArrived(message);
+        listener.onDataArrived(gson.fromJson(message, Message.class));
     }
 
     @Override
@@ -122,18 +131,37 @@ public class NIOServerConnection implements ServerConnection {
     }
 
     @Override
-    public void send(Long sessionId, String message) throws IOException {
+    public void send(Long sessionId, Message message) throws IOException {
         SelectionKey key = connections.get(sessionId);
-        SocketChannel channel = (SocketChannel) key.channel();
-        channel.write(ByteBuffer.wrap(message.getBytes()));
+        synchronized (changeRequests) {
+            changeRequests.add(key);
+            synchronized (pendingData) {
+                List<Message> queue = pendingData.get(key);
+                if (queue == null) {
+                    queue = new ArrayList<>();
+                    pendingData.put(key, queue);
+                }
+                queue.add(message);
+            }
+        }
+        selector.wakeup();
+    }
+
+    private void processWrite(SelectionKey key) throws IOException {
+        SocketChannel socketChannel = (SocketChannel) key.channel();
+        synchronized (pendingData) {
+            List<Message> queue = pendingData.get(key);
+            socketChannel.write(ByteBuffer.wrap(gson.toJson(queue).getBytes()));
+            queue.clear();
+            key.interestOps(OP_READ);
+        }
     }
 
     @Override
-    public void sendBroadcast(String message) throws IOException {
+    public void sendBroadcast(Message message) throws IOException {
         connections.forEach((i, k) -> {
             try {
-                SocketChannel channel = (SocketChannel) k.channel();
-                channel.write(ByteBuffer.wrap(message.getBytes()));
+                send(i, message);
             } catch (IOException e) {
             }
         });

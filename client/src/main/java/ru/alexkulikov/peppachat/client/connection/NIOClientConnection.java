@@ -1,5 +1,8 @@
 package ru.alexkulikov.peppachat.client.connection;
 
+import com.google.gson.Gson;
+import com.google.gson.reflect.TypeToken;
+import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 
@@ -10,6 +13,8 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
+import java.util.List;
+
 import org.apache.commons.lang3.StringUtils;
 
 import static java.nio.ByteBuffer.allocate;
@@ -101,7 +106,8 @@ public class NIOClientConnection implements ClientConnection {
             buffer.clear();
         }
 
-        listener.onDataArrived(builder.toString());
+        List<Message> messages = new Gson().fromJson(builder.toString(), new TypeToken<List<Message>>(){}.getType());
+        messages.forEach(listener::onDataArrived);
     }
 
     private void processWrite(SelectionKey socketKey) throws IOException {

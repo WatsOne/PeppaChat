@@ -77,9 +77,8 @@ public class Client implements ConnectionEventListener, DataProducer {
     }
 
     @Override
-    public void onDataArrived(String messageStr) {
+    public void onDataArrived(Message message) {
         try {
-            Message message = gson.fromJson(messageStr, Message.class);
             switch (message.getCommand()) {
                 case ID:
                     System.out.println("### Successfully connected, id: " + message.getSession().getId());

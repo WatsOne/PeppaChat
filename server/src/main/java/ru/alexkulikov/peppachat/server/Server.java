@@ -41,9 +41,8 @@ public class Server implements ConnectionEventListener {
     }
 
     @Override
-    public void onDataArrived(String messageStr) {
+    public void onDataArrived(Message message) {
         try {
-            Message message = gson.fromJson(messageStr, Message.class);
             System.out.println(message);
             switch (message.getCommand()) {
                 case REGISTER:
