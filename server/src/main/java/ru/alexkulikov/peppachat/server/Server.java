@@ -46,6 +46,8 @@ public class Server implements ConnectionEventListener {
                 case MESSAGE:
                     sendMessage(message);
                     break;
+                default:
+                    processCommand(message);
             }
         } catch (Exception e) {
 
@@ -55,7 +57,8 @@ public class Server implements ConnectionEventListener {
     @Override
     public void onDisconnect(Long sessionId) {
         Session session = storage.getSession(sessionId);
-        Message message = new Message(session, Command.SERVER_MESSAGE, "User \""+ session.getUserName() + "\" has left the chat.");
+        storage.removeSession(sessionId);
+        Message message = new Message(session, Command.SERVER_MESSAGE, "User \"" + session.getUserName() + "\" has left the chat.");
         worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
     }
 
@@ -69,7 +72,7 @@ public class Server implements ConnectionEventListener {
         Session clientSession = message.getSession();
         if (userNameExists(message.getText())) {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:")));
-        } else{
+        } else {
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
@@ -79,5 +82,18 @@ public class Server implements ConnectionEventListener {
 
     private boolean userNameExists(String userName) {
         return storage.getAllSession().stream().anyMatch(s -> s.getUserName().equals(userName));
+    }
+
+    private void processCommand(Message message) {
+        String commandResult;
+        switch (message.getCommand()) {
+            case ONLINE:
+                commandResult = "Current online: " + String.valueOf(storage.getAllSession().size());
+                break;
+            default:
+                commandResult = "Command not implemented";
+        }
+
+        worker.submit(new MessageEvent(connection, new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult)));
     }
 }

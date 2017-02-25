@@ -49,7 +49,8 @@ public class Client implements ConnectionEventListener, DataProducer {
                         }
 
                         if (isRegister()) {
-                            queue.put(gson.toJson(new Message(session, Command.MESSAGE, line)));
+                            Command command = Command.getCommand(line);
+                            queue.put(gson.toJson(new Message(session, command == null ? Command.MESSAGE : command, line)));
                         } else {
                             queue.put(gson.toJson(new Message(session, Command.REGISTER, line)));
                         }
@@ -105,7 +106,7 @@ public class Client implements ConnectionEventListener, DataProducer {
 
     @Override
     public void onDisconnect(Long sessionId) {
-
+        System.out.println("### Server shutdown, try to restart the app");
     }
 
     private boolean isRegister() {

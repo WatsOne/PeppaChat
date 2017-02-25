@@ -95,16 +95,26 @@ public class NIOClientConnection implements ClientConnection {
         socketKey.interestOps(OP_READ);
     }
 
-    private void processRead() throws IOException {
+    private void processRead() {
         buffer.clear();
-        int read = 0;
+        int read;
         StringBuilder builder = new StringBuilder();
-        while ((read = socket.read(buffer)) > 0) {
-            builder.append(SocketUtils.getBufferData(buffer));
-        }
 
-        List<Message> messages = new Gson().fromJson(builder.toString(), new TypeToken<List<Message>>(){}.getType());
-        messages.forEach(listener::onDataArrived);
+        try {
+            while ((read = socket.read(buffer)) > 0) {
+                builder.append(SocketUtils.getBufferData(buffer));
+            }
+
+            if (read < 0) {
+                disconnect();
+                return;
+            }
+
+            List<Message> messages = new Gson().fromJson(builder.toString(), new TypeToken<List<Message>>(){}.getType());
+            messages.forEach(listener::onDataArrived);
+        } catch (IOException e) {
+            disconnect();
+        }
     }
 
     private void processWrite(SelectionKey socketKey) throws IOException {
@@ -115,17 +125,17 @@ public class NIOClientConnection implements ClientConnection {
         }
     }
 
+    private void disconnect() {
+        listener.onDisconnect(null);
+        shutDown();
+    }
+
     @Override
     public void shutDown() {
         try {
             socket.close();
         } catch (IOException ignored) {
         }
-    }
-
-    @Override
-    public boolean isAlive() {
-        return socket.isOpen() && socket.isConnected();
     }
 
     private void checkSetup() throws ConnectionException {

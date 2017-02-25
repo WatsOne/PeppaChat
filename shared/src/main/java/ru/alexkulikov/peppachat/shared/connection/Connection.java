@@ -10,6 +10,4 @@ public interface Connection {
     void start() throws ConnectionException, IOException;
 
     void shutDown();
-
-    boolean isAlive();
 }

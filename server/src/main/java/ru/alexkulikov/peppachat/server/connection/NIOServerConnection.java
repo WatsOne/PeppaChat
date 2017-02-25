@@ -127,11 +127,6 @@ public class NIOServerConnection implements ServerConnection {
         channel.close();
     }
 
-    @Override
-    public boolean isAlive() {
-        return true;
-    }
-
     private void checkSetup() throws ConnectionException {
         if (socket == null || selector == null) {
             throw new ConnectionException("Connection doesn't setup");
