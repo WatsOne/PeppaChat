@@ -92,20 +92,23 @@ public class Client implements ConnectionEventListener, DataProducer {
                     break;
                 case REGISTER:
                     this.session = message.getSession();
-                    System.out.println("### " + message.getText());
+                    serverMessage(message.getText());
                     break;
                 case SERVER_MESSAGE:
-                    System.out.println("### " + message.getText());
+                    serverMessage(message.getText());
                     break;
                 case MESSAGE:
-                    System.out.println(message.getText());
-                    break;
                 default:
                     System.out.println(message.getText());
+                    break;
             }
         } catch (Exception e) {
             System.out.println(e);
         }
+    }
+
+    private void serverMessage(String message) {
+        System.out.println("### " + message);
     }
 
     @Override

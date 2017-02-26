@@ -1,5 +1,6 @@
 package ru.alexkulikov.peppachat.server;
 
+import org.apache.commons.lang3.StringUtils;
 import ru.alexkulikov.peppachat.server.connection.ServerConnection;
 import ru.alexkulikov.peppachat.server.connection.ServerConnectionFabric;
 import ru.alexkulikov.peppachat.server.storage.Storage;
@@ -76,7 +77,11 @@ public class Server implements ConnectionEventListener {
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, storage.getLastMessages())));
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST));
+            String history = storage.getLastMessages();
+            if (!StringUtils.isEmpty(history)) {
+                worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, history)));
+            }
         }
     }
 

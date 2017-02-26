@@ -1,7 +1,6 @@
 package ru.alexkulikov.peppachat.emulator;
 
 import com.google.gson.Gson;
-import org.apache.commons.lang3.StringUtils;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;
@@ -26,20 +25,22 @@ public class Bot implements ConnectionEventListener, DataProducer {
     private Gson gson = new Gson();
     private String botName;
     private ClientConnection connection;
+    private boolean observe;
 
-    public void start(String botName) {
+    public void start(String botName, boolean observe) {
         try {
             connection = ClientConnectionFabric.getClientConnection();
             connection.setup(HOST, PORT);
             connection.setEventListener(this);
             connection.setDataProducer(this);
             this.botName = botName;
+            this.observe = observe;
 
             new Thread(() -> {
                 try {
                     while (true) {
-                        Thread.sleep(1000 * rnd.nextInt(10) + 500);
-                        queue.put(gson.toJson(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20)))));
+                        Thread.sleep(1000 * (rnd.nextInt(10) + 1));
+                        queue.put(gson.toJson(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20) + 1))));
                         connection.notifyToSend();
                     }
                 } catch (Exception e) {
@@ -71,28 +72,38 @@ public class Bot implements ConnectionEventListener, DataProducer {
         try {
             switch (message.getCommand()) {
                 case ID:
-                    System.out.println("### Successfully connected, id: " + message.getSession().getId());
-                    System.out.println("### Welcome to PeppaChat! Please enter your name:");
+                    if (observe) {
+                        System.out.println("### Successfully connected, id: " + message.getSession().getId());
+                        System.out.println("### Welcome to PeppaChat! Please enter your name:");
+                    }
                     this.session = message.getSession();
                     queue.put(gson.toJson(new Message(session, Command.REGISTER, botName)));
                     connection.notifyToSend();
                     break;
                 case REGISTER:
                     this.session = message.getSession();
-                    System.out.println("### " + message.getText());
+                    if (observe) {
+                        serverMessage(message.getText());
+                    }
                     break;
                 case SERVER_MESSAGE:
-                    System.out.println("### " + message.getText());
+                    if (observe) {
+                        serverMessage(message.getText());
+                    }
                     break;
                 case MESSAGE:
-                    System.out.println("(" + botName + ") " + message.getText());
-                    break;
                 default:
-                    System.out.println(message.getText());
+                    if (observe) {
+                        System.out.println("(" + botName + ") " + message.getText());
+                    }
             }
         } catch (Exception e) {
             System.out.println(e);
         }
+    }
+
+    private void serverMessage(String message) {
+        System.out.println("### " + message);
     }
 
     @Override
