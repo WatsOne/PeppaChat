@@ -8,4 +8,6 @@ public interface ClientConnection extends Connection {
     void setDataProducer(DataProducer consumer);
 
     void notifyToSend() throws ConnectionException;
+
+    boolean isAlive();
 }

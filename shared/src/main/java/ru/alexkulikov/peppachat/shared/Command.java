@@ -10,7 +10,8 @@ public enum Command {
     ID,
 
     HELP(false, "Get information about commands"),
-    ONLINE(false, "Get current online");
+    ONLINE(false, "Get current online"),
+    EXIT(false, "Left chat");
 
     private boolean service;
     private String description;

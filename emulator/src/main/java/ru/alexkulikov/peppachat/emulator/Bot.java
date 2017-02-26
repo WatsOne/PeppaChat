@@ -20,9 +20,8 @@ public class Bot implements ConnectionEventListener, DataProducer {
     private static final int PORT = 10521;
     private static final String HOST = "localhost";
 
-    private BlockingQueue<String> queue = new ArrayBlockingQueue<>(2);
+    private BlockingQueue<Message> queue = new ArrayBlockingQueue<>(2);
     private Session session;
-    private Gson gson = new Gson();
     private String botName;
     private ClientConnection connection;
     private boolean observe;
@@ -40,7 +39,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
                 try {
                     while (true) {
                         Thread.sleep(1000 * (rnd.nextInt(10) + 1));
-                        queue.put(gson.toJson(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20) + 1))));
+                        queue.put(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20) + 1)));
                         connection.notifyToSend();
                     }
                 } catch (Exception e) {
@@ -63,7 +62,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
     }
 
     @Override
-    public String getDataToSend() {
+    public Message getDataToSend() {
         return queue.poll();
     }
 
@@ -77,7 +76,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
                         System.out.println("### Welcome to PeppaChat! Please enter your name:");
                     }
                     this.session = message.getSession();
-                    queue.put(gson.toJson(new Message(session, Command.REGISTER, botName)));
+                    queue.put(new Message(session, Command.REGISTER, botName));
                     connection.notifyToSend();
                     break;
                 case REGISTER:
@@ -98,7 +97,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
                     }
             }
         } catch (Exception e) {
-            System.out.println(e);
+            e.printStackTrace();
         }
     }
 

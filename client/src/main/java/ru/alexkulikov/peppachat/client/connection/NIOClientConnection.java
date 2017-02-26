@@ -3,6 +3,7 @@ package ru.alexkulikov.peppachat.client.connection;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import ru.alexkulikov.peppachat.shared.Message;
+import ru.alexkulikov.peppachat.shared.MessageSerializer;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
@@ -15,8 +16,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
-
-import org.apache.commons.lang3.StringUtils;
 
 import static java.nio.ByteBuffer.allocate;
 import static java.nio.channels.SelectionKey.OP_CONNECT;
@@ -31,6 +30,7 @@ public class NIOClientConnection implements ClientConnection {
     private DataProducer dataProducer;
     private ConnectionEventListener listener;
 
+    private MessageSerializer serializer;
     private ByteBuffer buffer = allocate(8096);
 
     @Override
@@ -40,6 +40,11 @@ public class NIOClientConnection implements ClientConnection {
         SelectionKey key = socket.keyFor(selector);
         key.interestOps(OP_WRITE);
         selector.wakeup();
+    }
+
+    @Override
+    public boolean isAlive() {
+        return socket.isOpen() && socket.isConnected();
     }
 
     @Override
@@ -61,6 +66,8 @@ public class NIOClientConnection implements ClientConnection {
 
         socket.register(selector, OP_CONNECT);
         socket.connect(new InetSocketAddress(host, port));
+
+        serializer = new MessageSerializer();
     }
 
     @Override
@@ -110,8 +117,7 @@ public class NIOClientConnection implements ClientConnection {
                 return;
             }
 
-            String concatenateParts = builder.toString().replaceAll("\\]\\[", ",");
-            List<Message> messages = new Gson().fromJson(concatenateParts, new TypeToken<List<Message>>(){}.getType());
+            List<Message> messages = serializer.getMessages(builder.toString());
             messages.forEach(listener::onDataArrived);
         } catch (IOException e) {
             disconnect();
@@ -120,11 +126,10 @@ public class NIOClientConnection implements ClientConnection {
     }
 
     private void processWrite(SelectionKey socketKey) throws IOException {
-        String message = dataProducer.getDataToSend();
-        if (!StringUtils.isEmpty(message)) {
-            socket.write(ByteBuffer.wrap(message.getBytes()));
-            socketKey.interestOps(OP_READ);
-        }
+        Message message = dataProducer.getDataToSend();
+        String data = serializer.serialize(message);
+        socket.write(ByteBuffer.wrap(data.getBytes()));
+        socketKey.interestOps(OP_READ);
     }
 
     private void disconnect() {
@@ -136,7 +141,8 @@ public class NIOClientConnection implements ClientConnection {
     public void shutDown() {
         try {
             socket.close();
-        } catch (IOException ignored) {
+        } catch (IOException e) {
+            System.out.println("Can't close socket");
         }
     }
 
