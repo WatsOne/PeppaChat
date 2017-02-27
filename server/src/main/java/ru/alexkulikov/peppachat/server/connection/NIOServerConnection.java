@@ -58,7 +58,7 @@ public class NIOServerConnection implements ServerConnection {
         while (socket.isOpen()) {
 
             synchronized (changeRequests) {
-                changeRequests.stream().filter(SelectionKey::isValid).forEach(k -> k.interestOps(OP_WRITE));
+                changeRequests.stream().filter(k -> k != null && k.isValid()).forEach(k -> k.interestOps(OP_WRITE));
                 changeRequests.clear();
             }
 
@@ -82,7 +82,11 @@ public class NIOServerConnection implements ServerConnection {
 
     @Override
     public void shutDown() {
-
+	    try {
+		    socket.close();
+	    } catch (IOException e) {
+		    System.out.println("Can't close socket");
+	    }
     }
 
     private void processAccept(SelectionKey key) throws IOException {
@@ -127,12 +131,6 @@ public class NIOServerConnection implements ServerConnection {
         connections.remove(sessionId);
         listener.onDisconnect(sessionId);
         channel.close();
-    }
-
-    private void checkSetup() throws ConnectionException {
-        if (socket == null || selector == null) {
-            throw new ConnectionException("Connection doesn't setup");
-        }
     }
 
     @Override

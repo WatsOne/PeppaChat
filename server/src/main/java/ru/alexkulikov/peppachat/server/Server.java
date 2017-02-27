@@ -35,25 +35,26 @@ public class Server implements ConnectionEventListener {
 
     public static void main(String[] args) throws Exception {
         System.out.println("Server started...");
-        new Server().run();
+        try {
+	        new Server().run();
+        } catch (Exception e) {
+	        e.printStackTrace();
+        }
     }
 
     @Override
     public void onDataArrived(Message message) {
-        try {
-            System.out.println(message);
-            switch (message.getCommand()) {
-                case REGISTER:
-                    register(message);
-                    break;
-                case MESSAGE:
-                    sendMessage(message);
-                    break;
-                default:
-                    processCommand(message);
-            }
-        } catch (Exception e) {
+        System.out.println(message);
 
+        switch (message.getCommand()) {
+            case REGISTER:
+                register(message);
+                break;
+            case MESSAGE:
+                sendMessage(message);
+                break;
+            default:
+                processCommand(message);
         }
     }
 
@@ -71,7 +72,7 @@ public class Server implements ConnectionEventListener {
         worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST_AUTHORIZED));
     }
 
-    private void register(Message message) throws IOException {
+    private void register(Message message) {
         Session clientSession = message.getSession();
         if (userNameExists(message.getText())) {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:")));
