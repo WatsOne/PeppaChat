@@ -19,11 +19,13 @@ public class Server implements ConnectionEventListener {
     private Storage storage;
     private ServerConnection connection;
 
-    private MessageWorker worker = new MessageWorker();
+    private MessageWorker worker;
 
     private void run() throws Exception {
-        new Thread(worker).start();
         storage = StorageFactory.getStorage();
+
+        worker = new MessageWorker(storage);
+	    new Thread(worker).start();
 
         connection = ServerConnectionFabric.getServerConnection();
         connection.setup(HOST, PORT);
@@ -60,13 +62,13 @@ public class Server implements ConnectionEventListener {
         Session session = storage.getSession(sessionId);
         storage.removeSession(sessionId);
         Message message = new Message(session, Command.SERVER_MESSAGE, "User \"" + session.getUserName() + "\" has left the chat.");
-        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
+        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST_AUTHORIZED));
     }
 
     private void sendMessage(Message message) {
         storage.saveMessage(message);
         message.setText(message.getSession().getUserName() + ": " + message.getText());
-        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST));
+        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST_AUTHORIZED));
     }
 
     private void register(Message message) throws IOException {
@@ -77,7 +79,7 @@ public class Server implements ConnectionEventListener {
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST));
+            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST_AUTHORIZED));
             String history = storage.getLastMessages();
             if (!StringUtils.isEmpty(history)) {
                 worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, history)));

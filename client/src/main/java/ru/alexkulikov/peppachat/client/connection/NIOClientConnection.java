@@ -1,7 +1,5 @@
 package ru.alexkulikov.peppachat.client.connection;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.MessageSerializer;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
@@ -17,7 +15,6 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.List;
 
-import static java.nio.ByteBuffer.allocate;
 import static java.nio.channels.SelectionKey.OP_CONNECT;
 import static java.nio.channels.SelectionKey.OP_READ;
 import static java.nio.channels.SelectionKey.OP_WRITE;
@@ -31,7 +28,7 @@ public class NIOClientConnection implements ClientConnection {
     private ConnectionEventListener listener;
 
     private MessageSerializer serializer;
-    private ByteBuffer buffer = allocate(8096);
+    private ByteBuffer buffer = ByteBuffer.allocate(8096);
 
     @Override
     public void notifyToSend() throws ConnectionException {
@@ -121,7 +118,6 @@ public class NIOClientConnection implements ClientConnection {
             messages.forEach(listener::onDataArrived);
         } catch (IOException e) {
             disconnect();
-        } catch (Exception e) {
         }
     }
 

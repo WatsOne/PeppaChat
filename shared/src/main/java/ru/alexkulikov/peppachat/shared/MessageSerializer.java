@@ -24,6 +24,10 @@ public class MessageSerializer {
         }
     }
 
+    public Message getMessage(String data) {
+    	return gson.fromJson(data, Message.class);
+    }
+
     public String serialize(Message message) {
         return gson.toJson(message);
     }

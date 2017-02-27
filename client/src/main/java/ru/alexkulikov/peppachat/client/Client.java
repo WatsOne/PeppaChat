@@ -53,11 +53,11 @@ public class Client implements ConnectionEventListener, DataProducer {
                             connection.notifyToSend();
                         } else {
                             Command command = Command.getCommand(line);
-                            if (command == null) {
+                            if (command != null) {
+                                processUserCommand(command);
+                            } else {
                                 queue.put(new Message(session, Command.MESSAGE, line));
                                 connection.notifyToSend();
-                            } else {
-                                processUserCommand(command);
                             }
                         }
                     } catch (InterruptedException e) {
@@ -73,7 +73,7 @@ public class Client implements ConnectionEventListener, DataProducer {
         try {
             connection.start();
         } catch (Exception e) {
-            System.out.println("### Connection error");
+            System.out.println("### Connection error, try to restart the application");
             connection.shutDown();
         }
     }

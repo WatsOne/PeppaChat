@@ -1,12 +1,8 @@
 package ru.alexkulikov.peppachat.server.connection;
 
-import com.google.gson.Gson;
-import ru.alexkulikov.peppachat.shared.Command;
-import ru.alexkulikov.peppachat.shared.Session;
+import ru.alexkulikov.peppachat.shared.*;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
-import ru.alexkulikov.peppachat.shared.Message;
-import ru.alexkulikov.peppachat.shared.SocketUtils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,12 +25,12 @@ public class NIOServerConnection implements ServerConnection {
 
     private ConnectionEventListener listener;
     private Map<Long, SelectionKey> connections = new HashMap<>();
-    private Gson gson = new Gson();
 
     private final List<SelectionKey> changeRequests = new LinkedList<>();
     private final Map<SelectionKey, List<Message>> pendingData = new HashMap<>();
 
     private Long id = 1L;
+    private MessageSerializer serializer;
 
     @Override
     public void setEventListener(ConnectionEventListener listener) {
@@ -50,6 +46,8 @@ public class NIOServerConnection implements ServerConnection {
         socket.configureBlocking(false);
 
         socket.register(selector, OP_ACCEPT);
+
+        serializer = new MessageSerializer();
     }
 
     @Override
@@ -60,7 +58,7 @@ public class NIOServerConnection implements ServerConnection {
         while (socket.isOpen()) {
 
             synchronized (changeRequests) {
-                changeRequests.stream().forEach(k -> k.interestOps(OP_WRITE));
+                changeRequests.stream().filter(SelectionKey::isValid).forEach(k -> k.interestOps(OP_WRITE));
                 changeRequests.clear();
             }
 
@@ -98,6 +96,7 @@ public class NIOServerConnection implements ServerConnection {
         Session session = new Session();
         session.setId(id);
         send(id, new Message(session, Command.ID));
+
         id++;
     }
 
@@ -105,24 +104,26 @@ public class NIOServerConnection implements ServerConnection {
         SocketChannel clientSocket = (SocketChannel) key.channel();
 
         readBuf.clear();
-        int readCount = 0;
+        int readCount;
         try {
             readCount = clientSocket.read(readBuf);
         } catch (IOException e) {
-            processUserDisconnect((Long) key.attachment(), clientSocket);
+            processUserDisconnect(key);
+            return;
         }
 
         if (readCount < 0) {
-            processUserDisconnect((Long) key.attachment(), clientSocket);
+            processUserDisconnect(key);
             return;
         }
 
         String message = SocketUtils.getBufferData(readBuf);
-        System.out.println(message);
-        listener.onDataArrived(gson.fromJson(message, Message.class));
+        listener.onDataArrived(serializer.getMessage(message));
     }
 
-    private void processUserDisconnect(Long sessionId, SocketChannel channel) throws IOException {
+    private void processUserDisconnect(SelectionKey key) throws IOException {
+    	SocketChannel channel = (SocketChannel) key.channel();
+    	Long sessionId = (Long) key.attachment();
         connections.remove(sessionId);
         listener.onDisconnect(sessionId);
         channel.close();
@@ -135,16 +136,12 @@ public class NIOServerConnection implements ServerConnection {
     }
 
     @Override
-    public void send(Long sessionId, Message message) throws IOException {
+    public void send(Long sessionId, Message message) {
         SelectionKey key = connections.get(sessionId);
         synchronized (changeRequests) {
             changeRequests.add(key);
             synchronized (pendingData) {
-                List<Message> queue = pendingData.get(key);
-                if (queue == null) {
-                    queue = new ArrayList<>();
-                    pendingData.put(key, queue);
-                }
+                List<Message> queue = pendingData.computeIfAbsent(key, k -> new ArrayList<>());
                 queue.add(message);
             }
         }
@@ -157,27 +154,18 @@ public class NIOServerConnection implements ServerConnection {
             try {
                 List<Message> queue = pendingData.get(key);
                 if (queue.size() > 0) {
-                    socketChannel.write(ByteBuffer.wrap(gson.toJson(queue).getBytes()));
+                    socketChannel.write(ByteBuffer.wrap(serializer.serialize(queue).getBytes()));
                     queue.clear();
                 }
                 key.interestOps(OP_READ);
             } catch (IOException e) {
-//                processUserDisconnect((Long) key.attachment(), socketChannel);
+                processUserDisconnect(key);
             }
         }
     }
 
     @Override
-    public void sendBroadcast(Message message) throws IOException {
-        connections.forEach((i, k) -> {
-            try {
-                send(i, message);
-            } catch (IOException e) {
-            }
-        });
-    }
-
-    private void sendUserDisconnected() {
-
+    public void sendBroadcast(Message message) {
+        connections.forEach((i, k) -> send(i, message));
     }
 }

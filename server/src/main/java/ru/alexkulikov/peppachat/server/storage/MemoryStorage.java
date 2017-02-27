@@ -5,16 +5,17 @@ import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class MemoryStorage implements Storage {
 
-    private EvictingQueue<Message> messages;
-    private Map<Long, Session> sessions;
+    private final EvictingQueue<Message> messages;
+    private final Map<Long, Session> sessions;
 
     public MemoryStorage() {
         messages = EvictingQueue.create(100);
-        sessions = new HashMap<>();
+        sessions = new ConcurrentHashMap<>();
     }
 
     @Override
@@ -24,17 +25,17 @@ public class MemoryStorage implements Storage {
 
     @Override
     public Session getSession(Long sessionId) {
-        return sessions.get(sessionId);
+	    return sessions.get(sessionId);
     }
 
     @Override
     public List<Session> getAllSession() {
-        return new ArrayList<>(sessions.values());
+	    return new ArrayList<>(sessions.values());
     }
 
     @Override
     public void removeSession(Long sessionId) {
-        sessions.remove(sessionId);
+	    sessions.remove(sessionId);
     }
 
     @Override
