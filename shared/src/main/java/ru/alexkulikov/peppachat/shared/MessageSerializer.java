@@ -25,7 +25,13 @@ public class MessageSerializer {
     }
 
     public Message getMessage(String data) {
-    	return gson.fromJson(data, Message.class);
+    	try {
+		    return gson.fromJson(data, Message.class);
+	    } catch (Exception e) {
+		    System.out.println(data);
+		    e.printStackTrace();
+		    return null;
+	    }
     }
 
     public String serialize(Message message) {

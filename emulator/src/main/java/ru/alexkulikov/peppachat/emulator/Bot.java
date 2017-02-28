@@ -1,6 +1,5 @@
 package ru.alexkulikov.peppachat.emulator;
 
-import com.google.gson.Gson;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;
@@ -9,6 +8,7 @@ import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 
+import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -25,21 +25,30 @@ public class Bot implements ConnectionEventListener, DataProducer {
     private String botName;
     private ClientConnection connection;
     private boolean observe;
+    private Queue<Event> receive;
+    private Queue<Bot> bots;
 
-    public void start(String botName, boolean observe) {
+    private volatile boolean run = true;
+
+    public void start(String botName, boolean observe, final Queue<Event> send, final Queue<Event> receive, final Queue<Bot> bots) {
         try {
             connection = ClientConnectionFabric.getClientConnection();
             connection.setup(HOST, PORT);
             connection.setEventListener(this);
             connection.setDataProducer(this);
+
             this.botName = botName;
             this.observe = observe;
+            this.receive = receive;
+	        this.bots = bots;
 
             new Thread(() -> {
                 try {
-                    while (true) {
-                        Thread.sleep(1000 * (rnd.nextInt(10) + 1));
-                        queue.put(new Message(session, Command.MESSAGE, getRandomString(rnd.nextInt(20) + 1)));
+                    while (run) {
+                        Thread.sleep(1000 * (rnd.nextInt(15) + 2));
+                        String msg = getRandomString(rnd.nextInt(20) + 1);
+                        send.add(new Event(botName + ": " + msg, System.nanoTime(), bots.size()));
+                        queue.put(new Message(session, Command.MESSAGE, msg));
                         connection.notifyToSend();
                     }
                 } catch (Exception e) {
@@ -51,6 +60,12 @@ public class Bot implements ConnectionEventListener, DataProducer {
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    public void stop() {
+    	run = false;
+    	connection.shutDown();
+	    System.out.println("Bot " + botName + " has stopped");
     }
 
     private String getRandomString(int len) {
@@ -81,17 +96,16 @@ public class Bot implements ConnectionEventListener, DataProducer {
                     break;
                 case REGISTER:
                     this.session = message.getSession();
-                    if (observe) {
-                        serverMessage(message.getText());
-                    }
+                    serverMessage(message.getText());
                     break;
                 case SERVER_MESSAGE:
-                    if (observe) {
-                        serverMessage(message.getText());
-                    }
+                    serverMessage(message.getText());
                     break;
                 case MESSAGE:
                 default:
+                    String msg = message.getText();
+                    receive.add(new Event(msg, System.nanoTime(), bots.size()));
+
                     if (observe) {
                         System.out.println("(" + botName + ") " + message.getText());
                     }
@@ -102,7 +116,9 @@ public class Bot implements ConnectionEventListener, DataProducer {
     }
 
     private void serverMessage(String message) {
-        System.out.println("### " + message);
+	    if (observe) {
+		    System.out.println("### " + message);
+	    }
     }
 
     @Override

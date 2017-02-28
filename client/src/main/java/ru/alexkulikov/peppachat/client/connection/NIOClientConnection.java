@@ -33,8 +33,12 @@ public class NIOClientConnection implements ClientConnection {
     @Override
     public void notifyToSend() throws ConnectionException {
         checkSetup();
-
         SelectionKey key = socket.keyFor(selector);
+
+        if (key == null || !key.isValid()) {
+        	return;
+        }
+
         key.interestOps(OP_WRITE);
         selector.wakeup();
     }
@@ -83,6 +87,10 @@ public class NIOClientConnection implements ClientConnection {
                 socketKey = socketIterator.next();
                 socketIterator.remove();
 
+                if (socketKey == null || !socketKey.isValid()) {
+                	continue;
+                }
+
                 if (socketKey.isConnectable()) {
                     processAccept(socketKey);
                 } else if (socketKey.isReadable()) {
@@ -117,7 +125,9 @@ public class NIOClientConnection implements ClientConnection {
             List<Message> messages = serializer.getMessages(builder.toString());
             messages.forEach(listener::onDataArrived);
         } catch (IOException e) {
-            disconnect();
+        	if (socket.isOpen()) {
+		        disconnect();
+	        }
         }
     }
 
