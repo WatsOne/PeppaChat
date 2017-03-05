@@ -35,10 +35,6 @@ public class NIOClientConnection implements ClientConnection {
         checkSetup();
         SelectionKey key = socket.keyFor(selector);
 
-        if (key == null || !key.isValid()) {
-        	return;
-        }
-
         key.interestOps(OP_WRITE);
         selector.wakeup();
     }
@@ -87,7 +83,7 @@ public class NIOClientConnection implements ClientConnection {
                 socketKey = socketIterator.next();
                 socketIterator.remove();
 
-                if (socketKey == null || !socketKey.isValid()) {
+                if (!socketKey.isValid()) {
                 	continue;
                 }
 
@@ -131,11 +127,15 @@ public class NIOClientConnection implements ClientConnection {
         }
     }
 
-    private void processWrite(SelectionKey socketKey) throws IOException {
-        Message message = dataProducer.getDataToSend();
-        String data = serializer.serialize(message);
-        socket.write(ByteBuffer.wrap(data.getBytes()));
-        socketKey.interestOps(OP_READ);
+    private void processWrite(SelectionKey socketKey)  {
+    	try {
+		    Message message = dataProducer.getDataToSend();
+		    String data = serializer.serialize(message);
+		    socket.write(ByteBuffer.wrap(data.getBytes()));
+		    socketKey.interestOps(OP_READ);
+	    } catch (IOException e) {
+		    System.out.println("Cant send message");
+	    }
     }
 
     private void disconnect() {

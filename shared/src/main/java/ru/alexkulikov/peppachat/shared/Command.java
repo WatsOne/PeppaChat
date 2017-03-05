@@ -8,6 +8,7 @@ public enum Command {
     MESSAGE,
     SERVER_MESSAGE,
     ID,
+    HISTORY,
 
     HELP(false, "Get information about commands"),
     ONLINE(false, "Get current online"),

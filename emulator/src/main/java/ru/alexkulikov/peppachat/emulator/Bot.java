@@ -1,5 +1,6 @@
 package ru.alexkulikov.peppachat.emulator;
 
+import org.apache.commons.lang3.StringUtils;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;
@@ -12,6 +13,7 @@ import java.util.Queue;
 import java.util.Random;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 public class Bot implements ConnectionEventListener, DataProducer {
     private static final String chars = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -28,9 +30,7 @@ public class Bot implements ConnectionEventListener, DataProducer {
     private Queue<Event> receive;
     private Queue<Bot> bots;
 
-    private volatile boolean run = true;
-
-    public void start(String botName, boolean observe, final Queue<Event> send, final Queue<Event> receive, final Queue<Bot> bots) {
+    public void start(String botName, boolean observe, final Queue<Event> send, final Queue<Event> receive, final Queue<Bot> bots, int sendCount, CountDownLatch doneLatch) {
         try {
             connection = ClientConnectionFabric.getClientConnection();
             connection.setup(HOST, PORT);
@@ -44,15 +44,24 @@ public class Bot implements ConnectionEventListener, DataProducer {
 
             new Thread(() -> {
                 try {
-                    while (run) {
+                    while (send.size() <= sendCount) {
                         Thread.sleep(1000 * (rnd.nextInt(15) + 2));
-                        String msg = getRandomString(rnd.nextInt(20) + 1);
-                        send.add(new Event(botName + ": " + msg, System.nanoTime(), bots.size()));
-                        queue.put(new Message(session, Command.MESSAGE, msg));
-                        connection.notifyToSend();
+                        if (send.size() <= sendCount) {
+	                        long time = System.currentTimeMillis();
+	                        String msg = getRandomString(rnd.nextInt(20) + 1) + "|" + time;
+	                        send.add(new Event(time, bots.size()));
+	                        queue.put(new Message(session, Command.MESSAGE, msg));
+	                        connection.notifyToSend();
+                        }
                     }
+
+                    Thread.sleep(100);
+                    connection.shutDown();
                 } catch (Exception e) {
                     e.printStackTrace();
+                } finally {
+	                bots.remove(this);
+	                doneLatch.countDown();
                 }
             }).start();
 
@@ -60,12 +69,6 @@ public class Bot implements ConnectionEventListener, DataProducer {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    public void stop() {
-    	run = false;
-    	connection.shutDown();
-	    System.out.println("Bot " + botName + " has stopped");
     }
 
     private String getRandomString(int len) {
@@ -101,14 +104,23 @@ public class Bot implements ConnectionEventListener, DataProducer {
                 case SERVER_MESSAGE:
                     serverMessage(message.getText());
                     break;
+	            case HISTORY:
+	            	if (observe) {
+			            System.out.println(message.getText());
+		            }
+		            break;
                 case MESSAGE:
                 default:
-                    String msg = message.getText();
-                    receive.add(new Event(msg, System.nanoTime(), bots.size()));
+	                if (observe) {
+		                System.out.println("(" + botName + ") " + message.getText());
+	                }
 
-                    if (observe) {
-                        System.out.println("(" + botName + ") " + message.getText());
-                    }
+                    String[] msg = message.getText().split("\\|");
+                    String time= msg[1];
+
+                    Event event = new Event(System.currentTimeMillis() - Long.parseLong(time), bots.size());
+
+                    receive.add(event);
             }
         } catch (Exception e) {
             e.printStackTrace();

@@ -1,55 +1,32 @@
 package ru.alexkulikov.peppachat.emulator;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.CountDownLatch;
 
 public class Emulator {
 
-	private static final boolean OBSERVE_ONE = true;
-	private static final int SPEED = 3;
-	private static final int FIX_BOT_COUNT = 100;
-	private static final int SEND_COUNT = 200;
-
-	private Random rnd = new Random();
+	private static final int FIX_BOT_COUNT = 300;
+	private static final int SEND_COUNT = 500;
 
 	private Queue<Event> send = new ConcurrentLinkedQueue<>();
 	private Queue<Event> receive = new ConcurrentLinkedQueue<>();
 
 	private Queue<Bot> bots = new ConcurrentLinkedQueue<>();
-	private Object stopEvent = new Object();
+	private static final CountDownLatch DONE_LATCH = new CountDownLatch(FIX_BOT_COUNT);
 
 	private void run() {
-		int botNumber = 0;
-
 		try {
-			if (OBSERVE_ONE) {
-				Bot observeBot = new Bot();
-				bots.add(observeBot);
-				new Thread(() -> observeBot.start("observeBot", true, send, receive, bots)).start();
+			Bot observeBot = new Bot();
+			bots.add(observeBot);
+			new Thread(() -> observeBot.start("observeBot", true, send, receive, bots, SEND_COUNT, DONE_LATCH)).start();
+
+			for (int i = 1; i < FIX_BOT_COUNT; i++) {
+				createAndStartBot(i);
+				Thread.sleep(100);
 			}
 
-			if (FIX_BOT_COUNT > 0) {
-				for (int i = 0; i < (FIX_BOT_COUNT - 2); i++) {
-					createAndStartBot(botNumber);
-					botNumber++;
-					Thread.sleep(100);
-				}
-
-				while (send.size() <= SEND_COUNT) {
-					Thread.sleep(1);
-				}
-			} else {
-				while (send.size() <= SEND_COUNT) {
-					System.out.println(">>> Send messages: " + send.size());
-					Thread.sleep(1000 * (rnd.nextInt(SPEED) + 1));
-					createAndStartBot(botNumber);
-					botNumber++;
-				}
-			}
-
-			System.out.println("### Stop and calculating....");
-			bots.forEach(Bot::stop);
+			DONE_LATCH.await();
 			showResults();
 
 		} catch (Exception e) {
@@ -60,32 +37,18 @@ public class Emulator {
 	private void createAndStartBot(final int botNumber) {
 		Bot bot = new Bot();
 		bots.add(bot);
-		new Thread(() -> bot.start("bot" + botNumber, !OBSERVE_ONE, send, receive, bots)).start();
+		new Thread(() -> bot.start("bot" + botNumber, false, send, receive, bots, SEND_COUNT, DONE_LATCH)).start();
 	}
 
 	private void showResults() {
 		long planReceive = 0;
 		long factReceive = receive.size();
-		for (Event e : send) planReceive += e.getBotCount();
+		for (Event e : send) {
+			planReceive += e.getBotCount();
+		}
 		System.out.println(">>> Plan receive: " + planReceive + " | fact receive: " + factReceive + " | lost: " + (planReceive - factReceive));
 
-		ArrayList<Long> times = new ArrayList<>();
-
-		String sendMessage;
-		long sendTime;
-
-		for (Event sendEvent : send) {
-			sendMessage = sendEvent.getMessage();
-			sendTime = sendEvent.getTime();
-			for (Event receiveEvent : receive) {
-				if (sendMessage.equals(receiveEvent.getMessage())) {
-					times.add(receiveEvent.getTime() - sendTime);
-					break;
-				}
-			}
-		}
-
-		OptionalDouble avgTimeOpt = times.stream().mapToLong(t -> t).average();
+		OptionalDouble avgTimeOpt = receive.stream().map(Event::getTime).mapToLong(t -> t).average();
 		avgTimeOpt.ifPresent(t -> System.out.println(">>> Average receive time: " + t / 1000000 + " ms."));
 	}
 

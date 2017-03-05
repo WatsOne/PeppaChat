@@ -118,6 +118,7 @@ public class Client implements ConnectionEventListener, DataProducer {
                 serverMessage(message.getText());
                 break;
             case MESSAGE:
+            case HISTORY:
             default:
                 System.out.println(message.getText());
         }

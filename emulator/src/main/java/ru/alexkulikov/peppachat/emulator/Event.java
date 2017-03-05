@@ -2,18 +2,12 @@ package ru.alexkulikov.peppachat.emulator;
 
 public class Event {
 
-	private String message;
 	private long time;
 	private int botCount;
 
-	public Event(String message, long time, int botCount) {
-		this.message = message;
+	public Event(long time, int botCount) {
 		this.time = time;
 		this.botCount = botCount;
-	}
-
-	public String getMessage() {
-		return message;
 	}
 
 	public long getTime() {

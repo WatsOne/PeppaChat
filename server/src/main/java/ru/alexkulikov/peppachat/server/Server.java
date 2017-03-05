@@ -83,7 +83,7 @@ public class Server implements ConnectionEventListener {
             worker.submit(new MessageEvent(connection, new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST_AUTHORIZED));
             String history = storage.getLastMessages();
             if (!StringUtils.isEmpty(history)) {
-                worker.submit(new MessageEvent(connection, new Message(clientSession, Command.MESSAGE, history)));
+                worker.submit(new MessageEvent(connection, new Message(clientSession, Command.HISTORY, history)));
             }
         }
     }
