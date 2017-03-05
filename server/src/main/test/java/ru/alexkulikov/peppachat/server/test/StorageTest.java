@@ -31,6 +31,6 @@ public class StorageTest extends Assert {
 			storage.saveMessage(new Message(session, Command.MESSAGE, "t"));
 		}
 
-		assertEquals(storage.getLastMessages().length(), Constants.STORE_MESSAGE_COUNT * 2);
+		assertEquals(storage.getLastMessages().length(), Constants.STORE_MESSAGE_COUNT * 2 - 1);
 	}
 }
