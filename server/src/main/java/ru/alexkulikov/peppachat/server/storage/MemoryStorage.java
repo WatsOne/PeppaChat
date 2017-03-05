@@ -1,6 +1,7 @@
 package ru.alexkulikov.peppachat.server.storage;
 
 import com.google.common.collect.EvictingQueue;
+import ru.alexkulikov.peppachat.shared.Constants;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 
@@ -14,7 +15,7 @@ public class MemoryStorage implements Storage {
     private final Map<Long, Session> sessions;
 
     public MemoryStorage() {
-        messages = EvictingQueue.create(100);
+        messages = EvictingQueue.create(Constants.STORE_MESSAGE_COUNT);
         sessions = new ConcurrentHashMap<>();
     }
 

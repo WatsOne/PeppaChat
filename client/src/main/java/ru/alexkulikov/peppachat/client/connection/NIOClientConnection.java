@@ -1,5 +1,6 @@
 package ru.alexkulikov.peppachat.client.connection;
 
+import ru.alexkulikov.peppachat.shared.Constants;
 import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.MessageSerializer;
 import ru.alexkulikov.peppachat.shared.SocketUtils;
@@ -28,7 +29,7 @@ public class NIOClientConnection implements ClientConnection {
     private ConnectionEventListener listener;
 
     private MessageSerializer serializer;
-    private ByteBuffer buffer = ByteBuffer.allocate(8096);
+    private ByteBuffer buffer = ByteBuffer.allocate(Constants.BUFFER_SIZE);
 
     @Override
     public void notifyToSend() throws ConnectionException {

@@ -19,7 +19,7 @@ import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOServerConnection implements ServerConnection {
 
-    private ByteBuffer readBuf = ByteBuffer.allocate(8096);
+    private ByteBuffer readBuf = ByteBuffer.allocate(Constants.BUFFER_SIZE);
     private Selector selector;
     private ServerSocketChannel socket;
 
