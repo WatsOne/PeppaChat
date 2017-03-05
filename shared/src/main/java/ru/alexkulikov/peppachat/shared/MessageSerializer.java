@@ -28,8 +28,7 @@ public class MessageSerializer {
     	try {
 		    return gson.fromJson(data, Message.class);
 	    } catch (Exception e) {
-		    System.out.println(data);
-		    e.printStackTrace();
+		    System.out.println("### Can't parse messages");
 		    return null;
 	    }
     }

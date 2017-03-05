@@ -121,8 +121,11 @@ public class NIOServerConnection implements ServerConnection {
             return;
         }
 
-        String message = SocketUtils.getBufferData(readBuf);
-        listener.onDataArrived(serializer.getMessage(message));
+        String messageStr = SocketUtils.getBufferData(readBuf);
+        Message message = serializer.getMessage(messageStr);
+        if (message != null) {
+	        listener.onDataArrived(message);
+        }
     }
 
     private void processUserDisconnect(SelectionKey key) throws IOException {
