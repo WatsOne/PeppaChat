@@ -23,10 +23,10 @@ public class Client implements ConnectionEventListener, DataProducer {
     private Session session;
     private ClientConnection connection;
 
-    private void run() {
+    private void run(String host, int port) {
         try {
             connection = ClientConnectionFabric.getClientConnection();
-            connection.setup(HOST, PORT);
+            connection.setup(host, port);
             connection.setEventListener(this);
             connection.setDataProducer(this);
         } catch (Exception e) {
@@ -94,7 +94,13 @@ public class Client implements ConnectionEventListener, DataProducer {
     }
 
     public static void main(String[] args) throws Exception {
-        new Client().run();
+	    String hostArg = args.length > 0 ? args[0] : "";
+	    String portArg = args.length > 1 ? args[1] : "";
+
+	    hostArg = StringUtils.isEmpty(hostArg) ? HOST : hostArg;
+	    int port = StringUtils.isEmpty(portArg) ? PORT : Integer.valueOf(portArg);
+
+        new Client().run(hostArg, port);
     }
 
     @Override

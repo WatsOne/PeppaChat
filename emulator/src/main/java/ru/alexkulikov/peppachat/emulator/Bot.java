@@ -1,6 +1,5 @@
 package ru.alexkulikov.peppachat.emulator;
 
-import org.apache.commons.lang3.StringUtils;
 import ru.alexkulikov.peppachat.client.connection.ClientConnection;
 import ru.alexkulikov.peppachat.client.connection.ClientConnectionFabric;
 import ru.alexkulikov.peppachat.client.connection.DataProducer;

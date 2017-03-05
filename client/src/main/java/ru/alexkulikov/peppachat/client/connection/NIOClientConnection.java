@@ -127,14 +127,14 @@ public class NIOClientConnection implements ClientConnection {
         }
     }
 
-    private void processWrite(SelectionKey socketKey)  {
+    private void processWrite(SelectionKey socketKey) throws ConnectionException {
     	try {
 		    Message message = dataProducer.getDataToSend();
 		    String data = serializer.serialize(message);
 		    socket.write(ByteBuffer.wrap(data.getBytes()));
 		    socketKey.interestOps(OP_READ);
 	    } catch (IOException e) {
-		    System.out.println("Cant send message");
+		    throw new ConnectionException("Can't send message, please try again");
 	    }
     }
 

@@ -21,22 +21,28 @@ public class Server implements ConnectionEventListener {
 
     private MessageWorker worker;
 
-    private void run() throws Exception {
+    private void run(String host, int port) throws Exception {
         storage = StorageFactory.getStorage();
 
         worker = new MessageWorker(storage);
 	    new Thread(worker).start();
 
         connection = ServerConnectionFabric.getServerConnection();
-        connection.setup(HOST, PORT);
+        connection.setup(host, port);
         connection.setEventListener(this);
         connection.start();
     }
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Server started...");
+	    String hostArg = args.length > 0 ? args[0] : "";
+	    String portArg = args.length > 1 ? args[1] : "";
+
+	    hostArg = StringUtils.isEmpty(hostArg) ? HOST : hostArg;
+	    int port = StringUtils.isEmpty(portArg) ? PORT : Integer.valueOf(portArg);
+
+        System.out.println("Server started on host: " + hostArg + " and port: " + port + "...");
         try {
-	        new Server().run();
+	        new Server().run(hostArg, port);
         } catch (Exception e) {
 	        e.printStackTrace();
         }
@@ -63,27 +69,31 @@ public class Server implements ConnectionEventListener {
         Session session = storage.getSession(sessionId);
         storage.removeSession(sessionId);
         Message message = new Message(session, Command.SERVER_MESSAGE, "User \"" + session.getUserName() + "\" has left the chat.");
-        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST_AUTHORIZED));
+
+        submit(message, SendMode.BROADCAST_AUTHORIZED);
     }
 
     private void sendMessage(Message message) {
         storage.saveMessage(message);
         message.setText(message.getSession().getUserName() + ": " + message.getText());
-        worker.submit(new MessageEvent(connection, message, SendMode.BROADCAST_AUTHORIZED));
+
+        submit(message, SendMode.BROADCAST_AUTHORIZED);
     }
 
     private void register(Message message) {
         Session clientSession = message.getSession();
         if (userNameExists(message.getText())) {
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:")));
+        	submit(new Message(clientSession, Command.REGISTER, "User already register, please, enter a new name:"));
         } else {
             clientSession.setUserName(message.getText());
             storage.saveSession(message.getSession());
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.REGISTER, "Successfully register!")));
-            worker.submit(new MessageEvent(connection, new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST_AUTHORIZED));
+
+            submit(new Message(clientSession, Command.REGISTER, "Successfully register!"));
+            submit(new Message(clientSession, Command.SERVER_MESSAGE, "User \""+ clientSession.getUserName() +"\" enter the chat!"), SendMode.BROADCAST_AUTHORIZED);
+
             String history = storage.getLastMessages();
             if (!StringUtils.isEmpty(history)) {
-                worker.submit(new MessageEvent(connection, new Message(clientSession, Command.HISTORY, history)));
+                submit(new Message(clientSession, Command.HISTORY, history));
             }
         }
     }
@@ -102,6 +112,14 @@ public class Server implements ConnectionEventListener {
                 commandResult = "Command not implemented";
         }
 
-        worker.submit(new MessageEvent(connection, new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult)));
+        submit(new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult));
+    }
+
+    private void submit(Message message) {
+    	submit(message, SendMode.RESPONSE);
+    }
+
+    private void submit(Message message, SendMode mode) {
+    	worker.submit(new MessageEvent(connection, message, mode));
     }
 }
