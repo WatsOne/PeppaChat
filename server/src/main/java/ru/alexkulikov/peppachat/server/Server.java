@@ -103,16 +103,36 @@ public class Server implements ConnectionEventListener {
     }
 
     private void processCommand(Message message) {
-        String commandResult;
+    	String commandResult;
         switch (message.getCommand()) {
             case ONLINE:
                 commandResult = "Current online: " + String.valueOf(storage.getAllSession().size());
+	            submit(new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult));
                 break;
+	        case CHANGENAME:
+		        if (userNameExists(message.getText())) {
+			        commandResult = "User already register";
+			        submit(new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult));
+			        break;
+		        }
+
+	            Session session = message.getSession();
+
+	            String oldUserName = session.getUserName();
+	            String newUserName = message.getText();
+
+	            session.setUserName(newUserName);
+	            storage.saveSession(session);
+	            message.setSession(session);
+
+		        submit(new Message(session, Command.REGISTER, "Username successfully changed!"));
+		        submit(new Message(session, Command.SERVER_MESSAGE, "User \""+ oldUserName +"\" change name to: \"" + newUserName + "\""), SendMode.BROADCAST_AUTHORIZED);
+
+		        break;
             default:
                 commandResult = "Command not implemented";
+	            submit(new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult));
         }
-
-        submit(new Message(message.getSession(), Command.SERVER_MESSAGE, commandResult));
     }
 
     private void submit(Message message) {

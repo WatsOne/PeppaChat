@@ -12,6 +12,7 @@ public enum Command {
 
     HELP(false, "Get information about commands"),
     ONLINE(false, "Get current online"),
+    CHANGENAME(false, "Change current username"),
     EXIT(false, "Left chat");
 
     private boolean service;

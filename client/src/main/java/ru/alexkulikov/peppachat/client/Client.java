@@ -87,7 +87,16 @@ public class Client implements ConnectionEventListener, DataProducer {
                 connection.shutDown();
                 System.out.println("### Successfully disconnected");
                 break;
-            default:
+	        case CHANGENAME:
+		        System.out.println("### Enter new username:");
+		        Scanner scanner = new Scanner(System.in);
+		        String newUserName = scanner.nextLine();
+		        if (!StringUtils.isEmpty(newUserName)) {
+		        	queue.put(new Message(session, Command.CHANGENAME, newUserName));
+		        	connection.notifyToSend();
+		        }
+		        break;
+	        default:
                 queue.put(new Message(session, command, null));
                 connection.notifyToSend();
         }
