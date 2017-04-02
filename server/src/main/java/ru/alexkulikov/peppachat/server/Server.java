@@ -10,7 +10,8 @@ import ru.alexkulikov.peppachat.shared.Message;
 import ru.alexkulikov.peppachat.shared.Session;
 import ru.alexkulikov.peppachat.shared.connection.ConnectionEventListener;
 
-import java.io.IOException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class Server implements ConnectionEventListener {
 	private static final int PORT = 10521;
@@ -20,6 +21,7 @@ public class Server implements ConnectionEventListener {
 	private ServerConnection connection;
 
 	private MessageWorker worker;
+	private ExecutorService executor = Executors.newFixedThreadPool(100);
 
 	private void run(String host, int port) throws Exception {
 		storage = StorageFactory.getStorage();
@@ -51,17 +53,18 @@ public class Server implements ConnectionEventListener {
 	@Override
 	public void onDataArrived(Message message) {
 		System.out.println(message);
-
-		switch (message.getCommand()) {
-			case REGISTER:
-				register(message);
-				break;
-			case MESSAGE:
-				sendMessage(message);
-				break;
-			default:
-				processCommand(message);
-		}
+		executor.submit(() -> {
+			switch (message.getCommand()) {
+				case REGISTER:
+					register(message);
+					break;
+				case MESSAGE:
+					sendMessage(message);
+					break;
+				default:
+					processCommand(message);
+			}
+		});
 	}
 
 	@Override
