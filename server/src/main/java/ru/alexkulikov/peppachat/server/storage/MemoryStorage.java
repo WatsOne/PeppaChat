@@ -11,41 +11,41 @@ import java.util.stream.Collectors;
 
 public class MemoryStorage implements Storage {
 
-    private final EvictingQueue<Message> messages;
-    private final Map<Long, Session> sessions;
+	private final EvictingQueue<Message> messages;
+	private final Map<Long, Session> sessions;
 
-    public MemoryStorage() {
-        messages = EvictingQueue.create(Constants.STORE_MESSAGE_COUNT);
-        sessions = new ConcurrentHashMap<>();
-    }
+	public MemoryStorage() {
+		messages = EvictingQueue.create(Constants.STORE_MESSAGE_COUNT);
+		sessions = new ConcurrentHashMap<>();
+	}
 
-    @Override
-    public void saveSession(Session session) {
-        sessions.put(session.getId(), session);
-    }
+	@Override
+	public void saveSession(Session session) {
+		sessions.put(session.getId(), session);
+	}
 
-    @Override
-    public Session getSession(Long sessionId) {
-	    return sessions.get(sessionId);
-    }
+	@Override
+	public Session getSession(Long sessionId) {
+		return sessions.get(sessionId);
+	}
 
-    @Override
-    public List<Session> getAllSession() {
-	    return new ArrayList<>(sessions.values());
-    }
+	@Override
+	public List<Session> getAllSession() {
+		return new ArrayList<>(sessions.values());
+	}
 
-    @Override
-    public void removeSession(Long sessionId) {
-	    sessions.remove(sessionId);
-    }
+	@Override
+	public void removeSession(Long sessionId) {
+		sessions.remove(sessionId);
+	}
 
-    @Override
-    public void saveMessage(Message message) {
-        messages.add(message);
-    }
+	@Override
+	public void saveMessage(Message message) {
+		messages.add(message);
+	}
 
-    @Override
-    public String getLastMessages() {
-        return messages.stream().map(Message::getText).collect(Collectors.joining("\n"));
-    }
+	@Override
+	public String getLastMessages() {
+		return messages.stream().map(Message::getText).collect(Collectors.joining("\n"));
+	}
 }

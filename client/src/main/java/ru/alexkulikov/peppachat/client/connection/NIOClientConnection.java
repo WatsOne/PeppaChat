@@ -22,140 +22,140 @@ import static java.nio.channels.SelectionKey.OP_WRITE;
 
 public class NIOClientConnection implements ClientConnection {
 
-    private Selector selector;
-    private SocketChannel socket;
+	private Selector selector;
+	private SocketChannel socket;
 
-    private DataProducer dataProducer;
-    private ConnectionEventListener listener;
+	private DataProducer dataProducer;
+	private ConnectionEventListener listener;
 
-    private MessageSerializer serializer;
-    private ByteBuffer buffer = ByteBuffer.allocate(Constants.BUFFER_SIZE);
+	private MessageSerializer serializer;
+	private ByteBuffer buffer = ByteBuffer.allocate(Constants.BUFFER_SIZE);
 
-    @Override
-    public void notifyToSend() throws ConnectionException {
-        checkSetup();
-        SelectionKey key = socket.keyFor(selector);
+	@Override
+	public void notifyToSend() throws ConnectionException {
+		checkSetup();
+		SelectionKey key = socket.keyFor(selector);
 
-        key.interestOps(OP_WRITE);
-        selector.wakeup();
-    }
+		key.interestOps(OP_WRITE);
+		selector.wakeup();
+	}
 
-    @Override
-    public boolean isAlive() {
-        return socket.isOpen() && socket.isConnected();
-    }
+	@Override
+	public boolean isAlive() {
+		return socket.isOpen() && socket.isConnected();
+	}
 
-    @Override
-    public void setEventListener(ConnectionEventListener listener) {
-        this.listener = listener;
-    }
+	@Override
+	public void setEventListener(ConnectionEventListener listener) {
+		this.listener = listener;
+	}
 
-    @Override
-    public void setDataProducer(DataProducer dataProducer) {
-        this.dataProducer = dataProducer;
-    }
+	@Override
+	public void setDataProducer(DataProducer dataProducer) {
+		this.dataProducer = dataProducer;
+	}
 
-    @Override
-    public void setup(String host, int port) throws IOException {
-        socket = SocketChannel.open();
-        socket.configureBlocking(false);
+	@Override
+	public void setup(String host, int port) throws IOException {
+		socket = SocketChannel.open();
+		socket.configureBlocking(false);
 
-        selector = Selector.open();
+		selector = Selector.open();
 
-        socket.register(selector, OP_CONNECT);
-        socket.connect(new InetSocketAddress(host, port));
+		socket.register(selector, OP_CONNECT);
+		socket.connect(new InetSocketAddress(host, port));
 
-        serializer = new MessageSerializer();
-    }
+		serializer = new MessageSerializer();
+	}
 
-    @Override
-    public void start() throws ConnectionException, IOException {
-        checkSetup();
+	@Override
+	public void start() throws ConnectionException, IOException {
+		checkSetup();
 
-        Iterator<SelectionKey> socketIterator;
-        SelectionKey socketKey;
+		Iterator<SelectionKey> socketIterator;
+		SelectionKey socketKey;
 
-        while (socket.isOpen()) {
+		while (socket.isOpen()) {
 
-            selector.select();
-            socketIterator = selector.selectedKeys().iterator();
+			selector.select();
+			socketIterator = selector.selectedKeys().iterator();
 
-            while (socketIterator.hasNext()) {
-                socketKey = socketIterator.next();
-                socketIterator.remove();
+			while (socketIterator.hasNext()) {
+				socketKey = socketIterator.next();
+				socketIterator.remove();
 
-                if (!socketKey.isValid()) {
-                	continue;
-                }
+				if (!socketKey.isValid()) {
+					continue;
+				}
 
-                if (socketKey.isConnectable()) {
-                    processAccept(socketKey);
-                } else if (socketKey.isReadable()) {
-                    processRead();
-                } else if (socketKey.isWritable()) {
-                    processWrite(socketKey);
-                }
-            }
-        }
-    }
+				if (socketKey.isConnectable()) {
+					processAccept(socketKey);
+				} else if (socketKey.isReadable()) {
+					processRead();
+				} else if (socketKey.isWritable()) {
+					processWrite(socketKey);
+				}
+			}
+		}
+	}
 
-    private void processAccept(SelectionKey socketKey) throws IOException {
-        socket.finishConnect();
-        socketKey.interestOps(OP_READ);
-    }
+	private void processAccept(SelectionKey socketKey) throws IOException {
+		socket.finishConnect();
+		socketKey.interestOps(OP_READ);
+	}
 
-    private void processRead() {
-        buffer.clear();
-        int read;
-        StringBuilder builder = new StringBuilder();
+	private void processRead() {
+		buffer.clear();
+		int read;
+		StringBuilder builder = new StringBuilder();
 
-        try {
-            while ((read = socket.read(buffer)) > 0) {
-                builder.append(SocketUtils.getBufferData(buffer));
-            }
+		try {
+			while ((read = socket.read(buffer)) > 0) {
+				builder.append(SocketUtils.getBufferData(buffer));
+			}
 
-            if (read < 0) {
-                disconnect();
-                return;
-            }
+			if (read < 0) {
+				disconnect();
+				return;
+			}
 
-            List<Message> messages = serializer.getMessages(builder.toString());
-            messages.forEach(listener::onDataArrived);
-        } catch (IOException e) {
-        	if (socket.isOpen()) {
-		        disconnect();
-	        }
-        }
-    }
+			List<Message> messages = serializer.getMessages(builder.toString());
+			messages.forEach(listener::onDataArrived);
+		} catch (IOException e) {
+			if (socket.isOpen()) {
+				disconnect();
+			}
+		}
+	}
 
-    private void processWrite(SelectionKey socketKey) throws ConnectionException {
-    	try {
-		    Message message = dataProducer.getDataToSend();
-		    String data = serializer.serialize(message);
-		    socket.write(ByteBuffer.wrap(data.getBytes()));
-		    socketKey.interestOps(OP_READ);
-	    } catch (IOException e) {
-		    throw new ConnectionException("Can't send message, please try again");
-	    }
-    }
+	private void processWrite(SelectionKey socketKey) throws ConnectionException {
+		try {
+			Message message = dataProducer.getDataToSend();
+			String data = serializer.serialize(message);
+			socket.write(ByteBuffer.wrap(data.getBytes()));
+			socketKey.interestOps(OP_READ);
+		} catch (IOException e) {
+			throw new ConnectionException("Can't send message, please try again");
+		}
+	}
 
-    private void disconnect() {
-        listener.onDisconnect(null);
-        shutDown();
-    }
+	private void disconnect() {
+		listener.onDisconnect(null);
+		shutDown();
+	}
 
-    @Override
-    public void shutDown() {
-        try {
-            socket.close();
-        } catch (IOException e) {
-            System.out.println("Can't close socket");
-        }
-    }
+	@Override
+	public void shutDown() {
+		try {
+			socket.close();
+		} catch (IOException e) {
+			System.out.println("Can't close socket");
+		}
+	}
 
-    private void checkSetup() throws ConnectionException {
-        if (socket == null || selector == null) {
-            throw new ConnectionException("Connection doesn't setup");
-        }
-    }
+	private void checkSetup() throws ConnectionException {
+		if (socket == null || selector == null) {
+			throw new ConnectionException("Connection doesn't setup");
+		}
+	}
 }

@@ -5,7 +5,7 @@ import ru.alexkulikov.peppachat.shared.connection.Connection;
 
 public interface ServerConnection extends Connection {
 
-    void send(Long sessionId, Message message);
+	void send(Long sessionId, Message message);
 
-    void sendBroadcast(Message message);
+	void sendBroadcast(Message message);
 }

@@ -8,8 +8,8 @@ import java.util.concurrent.CountDownLatch;
 
 public class Emulator {
 
-	private static final int DEFAULT_BOT_COUNT = 100;
-	private static final int DEFAULT_SEND_COUNT = 200;
+	private static final int DEFAULT_BOT_COUNT = 200;
+	private static final int DEFAULT_SEND_COUNT = 20;
 
 	private Queue<Event> send = new ConcurrentLinkedQueue<>();
 	private Queue<Event> receive = new ConcurrentLinkedQueue<>();

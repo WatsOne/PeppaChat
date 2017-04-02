@@ -4,12 +4,12 @@ import java.nio.ByteBuffer;
 
 public class SocketUtils {
 
-    public static String getBufferData(ByteBuffer buffer) {
-        buffer.flip();
-        byte[] bytes = new byte[buffer.limit()];
-        buffer.get(bytes);
-        String result = new String(bytes);
-        buffer.clear();
-        return result;
-    }
+	public static String getBufferData(ByteBuffer buffer) {
+		buffer.flip();
+		byte[] bytes = new byte[buffer.limit()];
+		buffer.get(bytes);
+		String result = new String(bytes);
+		buffer.clear();
+		return result;
+	}
 }

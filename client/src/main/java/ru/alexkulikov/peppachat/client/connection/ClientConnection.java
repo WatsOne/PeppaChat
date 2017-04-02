@@ -5,9 +5,9 @@ import ru.alexkulikov.peppachat.shared.connection.ConnectionException;
 
 public interface ClientConnection extends Connection {
 
-    void setDataProducer(DataProducer consumer);
+	void setDataProducer(DataProducer consumer);
 
-    void notifyToSend() throws ConnectionException;
+	void notifyToSend() throws ConnectionException;
 
-    boolean isAlive();
+	boolean isAlive();
 }

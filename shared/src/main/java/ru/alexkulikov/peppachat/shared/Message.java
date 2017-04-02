@@ -4,55 +4,55 @@ import java.io.Serializable;
 
 public class Message implements Serializable {
 
-    private Session session;
-    private Command command;
-    private String text;
+	private Session session;
+	private Command command;
+	private String text;
 
-    public Message() {
-    }
+	public Message() {
+	}
 
-    public Message(Session session, Command command) {
-        this.command = command;
-        this.session = session;
-        this.text = null;
-    }
+	public Message(Session session, Command command) {
+		this.command = command;
+		this.session = session;
+		this.text = null;
+	}
 
-    public Message(Session session, Command command, String text) {
-        this.session = session;
-        this.command = command;
-        this.text = text;
-    }
+	public Message(Session session, Command command, String text) {
+		this.session = session;
+		this.command = command;
+		this.text = text;
+	}
 
-    public Session getSession() {
-        return session;
-    }
+	public Session getSession() {
+		return session;
+	}
 
-    public void setSession(Session session) {
-        this.session = session;
-    }
+	public void setSession(Session session) {
+		this.session = session;
+	}
 
-    public Command getCommand() {
-        return command;
-    }
+	public Command getCommand() {
+		return command;
+	}
 
-    public void setCommand(Command command) {
-        this.command = command;
-    }
+	public void setCommand(Command command) {
+		this.command = command;
+	}
 
-    public String getText() {
-        return text;
-    }
+	public String getText() {
+		return text;
+	}
 
-    public void setText(String text) {
-        this.text = text;
-    }
+	public void setText(String text) {
+		this.text = text;
+	}
 
-    @Override
-    public String toString() {
-        return "Message{" +
-                "session=" + session +
-                ", command=" + command +
-                ", text='" + text + '\'' +
-                '}';
-    }
+	@Override
+	public String toString() {
+		return "Message{" +
+				"session=" + session +
+				", command=" + command +
+				", text='" + text + '\'' +
+				'}';
+	}
 }
